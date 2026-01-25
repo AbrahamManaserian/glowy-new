@@ -229,7 +229,7 @@ function Navbar({ locale }) {
                 src={user?.photoURL}
                 alt={user?.displayName || 'User'}
               >
-                {!user?.photoURL && <PersonOutlineIcon sx={{ fontSize: 28 }} />}
+                {!user?.photoURL && <PersonOutlineIcon sx={{ fontSize: 27 }} />}
               </Avatar>
             </IconButton>
 
