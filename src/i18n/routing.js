@@ -10,6 +10,9 @@ export const routing = defineRouting({
 
   // The prefix strategy
   localePrefix: 'as-needed',
+
+  // Disable automatic locale detection to force defaultLocale
+  localeDetection: false,
 });
 
 export const { Link, redirect, usePathname, useRouter } = createNavigation(routing);

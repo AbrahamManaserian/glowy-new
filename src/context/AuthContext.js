@@ -27,7 +27,11 @@ export const AuthContextProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setUser(user);
+        // Fetch user role from Firestore
+        const userRef = doc(db, 'users', user.uid);
+        const snapshot = await getDoc(userRef);
+        const userData = snapshot.exists() ? snapshot.data() : {};
+        setUser({ ...user, ...userData });
       } else {
         setUser(null);
       }

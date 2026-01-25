@@ -31,6 +31,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import Avatar from '@mui/material/Avatar';
 
 import { useTranslations } from 'next-intl';
@@ -38,6 +39,7 @@ import { Link, usePathname, useRouter } from '../i18n/routing';
 import { ShoppingBasketIcon } from './ShoppingBasketIcon';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+
 
 const navItems = ['shop', 'makeup', 'fragrance', 'sale', 'gift cards', 'about'];
 const languages = [
@@ -79,6 +81,10 @@ function Navbar({ locale }) {
     localStorage.setItem('preferredLanguage', locale);
   }, [locale]);
 
+  if (pathname && pathname.startsWith('/admin')) {
+    return null;
+  }
+
   const getPath = (item) => {
     if (item === 'gift cards') return '/gift-cards';
     return `/${item}`;
@@ -115,6 +121,9 @@ function Navbar({ locale }) {
     { label: t('profile'), icon: <PersonOutlineIcon fontSize="small" />, link: '/profile' },
     { label: t('orders'), icon: <ShoppingBagOutlinedIcon fontSize="small" />, link: '/orders' },
     { label: t('wishlist'), icon: <FavoriteBorderIcon fontSize="small" />, link: '/wishlist' },
+    ...(user?.role === 'admin'
+      ? [{ label: 'Admin Panel', icon: <DashboardIcon fontSize="small" />, link: '/admin/dashboard' }]
+      : []),
     ...(user
       ? [
           { label: t('settings'), icon: <SettingsOutlinedIcon fontSize="small" />, link: '/settings' },
@@ -129,7 +138,12 @@ function Navbar({ locale }) {
       position="sticky"
       color="inherit"
       elevation={0}
-      sx={{ borderBottom: '1px solid #eaeaea', bgcolor: 'background.paper' }}
+      sx={{
+        borderBottom: '1px solid #eaeaea',
+        bgcolor: 'background.paper',
+        top: 0,
+        zIndex: (theme) => theme.zIndex.appBar || 1100,
+      }}
     >
       <Container maxWidth="xl">
         <Toolbar disableGutters>
