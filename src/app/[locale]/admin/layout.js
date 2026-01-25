@@ -173,14 +173,14 @@ export default function AdminLayout({ children }) {
             backgroundColor: (theme) =>
               theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[900],
             flexGrow: 1,
-            height: '100vh',
+            height: '90vh',
             overflow: 'auto',
           }}
         >
           <DrawerHeader />
-          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Box maxWidth="lg" sx={{ p: { xs: '5px', sm: '10px' }, my: '15px' }}>
             {children}
-          </Container>
+          </Box>
         </Box>
       </Box>
     </ThemeProvider>

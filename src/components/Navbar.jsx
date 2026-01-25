@@ -81,10 +81,6 @@ function Navbar({ locale }) {
     localStorage.setItem('preferredLanguage', locale);
   }, [locale]);
 
-  if (pathname && pathname.startsWith('/admin')) {
-    return null;
-  }
-
   const getPath = (item) => {
     if (item === 'gift cards') return '/gift-cards';
     return `/${item}`;
@@ -142,7 +138,7 @@ function Navbar({ locale }) {
         borderBottom: '1px solid #eaeaea',
         bgcolor: 'background.paper',
         top: 0,
-        zIndex: (theme) => theme.zIndex.appBar || 1100,
+        zIndex: 3100,
       }}
     >
       <Container maxWidth="xl">

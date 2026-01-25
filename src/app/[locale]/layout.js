@@ -7,6 +7,14 @@ import { AuthContextProvider } from '../../context/AuthContext';
 import '../globals.css';
 import Navbar from '../../components/Navbar';
 
+export const metadata = {
+  title: 'Glowy',
+  description: 'Your beauty store',
+  icons: {
+    icon: '/favcon.ico',
+  },
+};
+
 export default async function CreateLayout({ children, params }) {
   const { locale } = await params;
   const messages = await getMessages();
