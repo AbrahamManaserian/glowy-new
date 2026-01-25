@@ -28,7 +28,7 @@ export default async function LocaleLayout({ children, params }) {
             <NextIntlClientProvider messages={messages}>
               <AuthContextProvider>
                 <Navbar locale={locale} />
-                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>{children}</div>
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>{children}</div>
               </AuthContextProvider>
             </NextIntlClientProvider>
           </ThemeProvider>

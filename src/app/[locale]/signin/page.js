@@ -80,6 +80,7 @@ export default function SignInPage() {
           p: { xs: 2, sm: 4 },
           borderRadius: 2,
           boxShadow: 3,
+          mb: '5px',
         }}
       >
         <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
@@ -102,6 +103,7 @@ export default function SignInPage() {
             margin="normal"
             required
             fullWidth
+            size="small"
             id="email"
             label={t('email')}
             name="email"
@@ -113,6 +115,7 @@ export default function SignInPage() {
           <TextField
             margin="normal"
             required
+            size="small"
             fullWidth
             name="password"
             label={t('password')}
