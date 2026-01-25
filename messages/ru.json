@@ -5,7 +5,18 @@
     "fragrance": "Ароматы",
     "sale": "Распродажа",
     "gift cards": "Подарочные карты",
-    "about": "О нас"
+    "about": "О нас",
+    "login": "Войти",
+    "logout": "Выйти",
+    "profile": "Профиль",
+    "orders": "Мои заказы",
+    "wishlist": "Список желаний",
+    "settings": "Настройки",
+    "payment": "Оплата",
+    "help": "Помощь",
+    "language": "Язык",
+    "welcome": "Добро пожаловать, {name}",
+    "welcome_guest": "Добро пожаловать, Гость"
   },
   "HomePage": {
     "title": "Добро пожаловать"
@@ -17,5 +28,20 @@
     "sale": "Это страница распродажи",
     "gift cards": "Это страница подарочных карт",
     "about": "Это страница о нас"
+  },
+  "Auth": {
+    "signin": "Войти",
+    "signup": "Зарегистрироваться",
+    "email": "Эл. адрес",
+    "password": "Пароль",
+    "fullname": "Полное имя",
+    "continue_with": "или продолжить через",
+    "dont_have_account": "Нет аккаунта?",
+    "have_account": "Уже зарегистрированы?",
+    "get_started": "Начать",
+    "create_account": "Создать аккаунт",
+    "forgot_password": "Забыли пароль?",
+    "success_login": "Успешный вход",
+    "success_signup": "Успешная регистрация"
   }
 }

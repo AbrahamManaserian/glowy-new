@@ -5,7 +5,18 @@
     "fragrance": "Fragrance",
     "sale": "Sale",
     "gift cards": "Gift Cards",
-    "about": "About"
+    "about": "About",
+    "login": "Login",
+    "logout": "Logout",
+    "profile": "Profile",
+    "orders": "My Orders",
+    "wishlist": "Wishlist",
+    "settings": "Settings",
+    "payment": "Payment",
+    "help": "Help",
+    "language": "Language",
+    "welcome": "Welcome, {name}",
+    "welcome_guest": "Welcome, Guest"
   },
   "HomePage": {
     "title": "Welcome"
@@ -17,5 +28,20 @@
     "sale": "This is sale page",
     "gift cards": "This is gift cards page",
     "about": "This is about page"
+  },
+  "Auth": {
+    "signin": "Sign in",
+    "signup": "Sign up",
+    "email": "Email address",
+    "password": "Password",
+    "fullname": "Full name",
+    "continue_with": "or continue with",
+    "dont_have_account": "Don't have an account?",
+    "have_account": "Already have an account?",
+    "get_started": "Get started",
+    "create_account": "Create account",
+    "forgot_password": "Forgot password?",
+    "success_login": "Successfully signed in",
+    "success_signup": "Successfully signed up"
   }
 }

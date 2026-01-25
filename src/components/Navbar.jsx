@@ -14,27 +14,65 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import Collapse from '@mui/material/Collapse';
+
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import PaymentOutlinedIcon from '@mui/icons-material/PaymentOutlined';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import TranslateIcon from '@mui/icons-material/Translate';
+import LogoutIcon from '@mui/icons-material/Logout';
+import LoginIcon from '@mui/icons-material/Login';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import Avatar from '@mui/material/Avatar';
+
 import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '../i18n/routing';
 import { ShoppingBasketIcon } from './ShoppingBasketIcon';
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = ['shop', 'makeup', 'fragrance', 'sale', 'gift cards', 'about'];
-const languages = ['am', 'ru', 'en'];
+const languages = [
+  { code: 'am', label: 'Հայերեն' },
+  { code: 'en', label: 'English' },
+  { code: 'ru', label: 'Русский' },
+];
 
 function Navbar({ locale }) {
   const t = useTranslations('Navigation');
   const pathname = usePathname();
   const router = useRouter();
+  const { user, logout } = useAuth();
+
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorElUser, setAnchorElUser] = useState(null);
+  const [langOpen, setLangOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen((prevState) => !prevState);
   };
 
+  const handleOpenUserMenu = (event) => {
+    setAnchorElUser(event.currentTarget);
+    setLangOpen(false); // Reset lang menu state
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorElUser(null);
+  };
+
   const changeLanguage = (newLocale) => {
     localStorage.setItem('preferredLanguage', newLocale);
     router.replace(pathname, { locale: newLocale });
+    handleCloseUserMenu();
   };
 
   useEffect(() => {
@@ -62,6 +100,7 @@ function Navbar({ locale }) {
                   primary={t(item)}
                   primaryTypographyProps={{
                     color: isActive ? '#f44336' : 'inherit',
+                    textTransform: 'capitalize',
                   }}
                 />
               </ListItemButton>
@@ -69,23 +108,21 @@ function Navbar({ locale }) {
           );
         })}
       </List>
-      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, p: 2 }}>
-        {languages.map((lang) => (
-          <Button
-            key={lang}
-            onClick={() => changeLanguage(lang)}
-            sx={{
-              minWidth: 'auto',
-              fontWeight: locale === lang ? 'bold' : 'normal',
-              color: 'text.primary',
-            }}
-          >
-            {lang.toUpperCase()}
-          </Button>
-        ))}
-      </Box>
     </Box>
   );
+
+  const menuItems = [
+    { label: t('profile'), icon: <PersonOutlineIcon fontSize="small" />, link: '/profile' },
+    { label: t('orders'), icon: <ShoppingBagOutlinedIcon fontSize="small" />, link: '/orders' },
+    { label: t('wishlist'), icon: <FavoriteBorderIcon fontSize="small" />, link: '/wishlist' },
+    ...(user
+      ? [
+          { label: t('settings'), icon: <SettingsOutlinedIcon fontSize="small" />, link: '/settings' },
+          { label: t('payment'), icon: <PaymentOutlinedIcon fontSize="small" />, link: '/payment' },
+        ]
+      : []),
+    { label: t('help'), icon: <HelpOutlineIcon fontSize="small" />, link: '/help' },
+  ];
 
   return (
     <AppBar
@@ -156,7 +193,6 @@ function Navbar({ locale }) {
             {navItems.map((item) => {
               const path = getPath(item);
               const isActive = pathname === path;
-
               return (
                 <Button
                   key={item}
@@ -168,6 +204,7 @@ function Navbar({ locale }) {
                     display: 'block',
                     fontWeight: 400,
                     letterSpacing: '0.05rem',
+                    textTransform: 'capitalize',
                     '&:hover': {
                       backgroundColor: 'transparent',
                       textDecoration: 'underline',
@@ -181,29 +218,106 @@ function Navbar({ locale }) {
             })}
           </Box>
 
-          {/* Actions (Lang + Basket) */}
+          {/* Actions (User Menu + Basket) */}
           <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-              {languages.map((lang) => (
-                <Button
-                  key={lang}
-                  onClick={() => changeLanguage(lang)}
-                  sx={{
-                    minWidth: '30px',
-                    padding: '0 5px',
-                    fontWeight: locale === lang ? 'bold' : 'normal',
-                    color: 'text.secondary',
-                    fontSize: '0.75rem',
-                  }}
-                >
-                  {lang.toUpperCase()}
-                </Button>
-              ))}
-            </Box>
-
             <IconButton sx={{ ml: 1 }}>
               <ShoppingBasketIcon color="#000" size="24" />
             </IconButton>
+            <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+              <Avatar
+                sx={{ bgcolor: 'transparent', color: '#000', width: 32, height: 32 }}
+                src={user?.photoURL}
+                alt={user?.displayName || 'User'}
+              >
+                {!user?.photoURL && <PersonOutlineIcon sx={{ fontSize: 28 }} />}
+              </Avatar>
+            </IconButton>
+
+            <Menu
+              sx={{ mt: '45px' }}
+              id="menu-appbar"
+              anchorEl={anchorElUser}
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              open={Boolean(anchorElUser)}
+              onClose={handleCloseUserMenu}
+              PaperProps={{
+                style: {
+                  width: 250,
+                },
+              }}
+            >
+              <Box sx={{ px: 2, py: 1.5 }}>
+                <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold' }}>
+                  {user ? t('welcome', { name: user.displayName || user.email }) : t('welcome_guest')}
+                </Typography>
+                {user && user.email && (
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    {user.email}
+                  </Typography>
+                )}
+              </Box>
+              <Divider />
+
+              {menuItems.map((item) => (
+                <MenuItem key={item.label} onClick={handleCloseUserMenu} component={Link} href={item.link}>
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </MenuItem>
+              ))}
+
+              <MenuItem onClick={() => setLangOpen(!langOpen)}>
+                <ListItemIcon>
+                  <TranslateIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary={t('language')} />
+                {langOpen ? <ExpandLess /> : <ExpandMore />}
+              </MenuItem>
+              <Collapse in={langOpen} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {languages.map((lang) => (
+                    <ListItemButton
+                      key={lang.code}
+                      sx={{ pl: 4 }}
+                      onClick={() => changeLanguage(lang.code)}
+                      selected={locale === lang.code}
+                    >
+                      <ListItemText primary={lang.label} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Collapse>
+
+              <Divider />
+
+              {user ? (
+                <MenuItem
+                  onClick={() => {
+                    logout();
+                    handleCloseUserMenu();
+                  }}
+                >
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={t('logout')} />
+                </MenuItem>
+              ) : (
+                <MenuItem onClick={handleCloseUserMenu} component={Link} href={`/signin?from=${pathname}`}>
+                  <ListItemIcon>
+                    <LoginIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={t('login')} />
+                </MenuItem>
+              )}
+            </Menu>
           </Box>
         </Toolbar>
       </Container>

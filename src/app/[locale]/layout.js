@@ -4,6 +4,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '../../theme';
 import Navbar from '../../components/Navbar';
+import { AuthContextProvider } from '../../context/AuthContext';
 import '../globals.css';
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -25,8 +26,10 @@ export default async function LocaleLayout({ children, params }) {
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <NextIntlClientProvider messages={messages}>
-              <Navbar locale={locale} />
-              <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>{children}</div>
+              <AuthContextProvider>
+                <Navbar locale={locale} />
+                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>{children}</div>
+              </AuthContextProvider>
             </NextIntlClientProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>
