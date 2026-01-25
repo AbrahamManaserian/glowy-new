@@ -81,6 +81,7 @@ export default function SignUpPage() {
           p: { xs: 2, sm: 4 },
           borderRadius: 2,
           boxShadow: 3,
+          mb: '5px',
         }}
       >
         <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
@@ -103,6 +104,7 @@ export default function SignUpPage() {
             margin="normal"
             required
             fullWidth
+            size="small"
             id="fullname"
             label={t('fullname')}
             name="fullname"
@@ -115,6 +117,7 @@ export default function SignUpPage() {
             margin="normal"
             required
             fullWidth
+            size="small"
             id="email"
             label={t('email')}
             name="email"
@@ -126,6 +129,7 @@ export default function SignUpPage() {
             margin="normal"
             required
             fullWidth
+            size="small"
             name="password"
             label={t('password')}
             type="password"
