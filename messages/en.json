@@ -1,0 +1,21 @@
+{
+  "Navigation": {
+    "shop": "Shop",
+    "makeup": "Makeup",
+    "fragrance": "Fragrance",
+    "sale": "Sale",
+    "gift cards": "Gift Cards",
+    "about": "About"
+  },
+  "HomePage": {
+    "title": "Welcome"
+  },
+  "Pages": {
+    "shop": "This is shop page",
+    "makeup": "This is makeup page",
+    "fragrance": "This is fragrance page",
+    "sale": "This is sale page",
+    "gift cards": "This is gift cards page",
+    "about": "This is about page"
+  }
+}
