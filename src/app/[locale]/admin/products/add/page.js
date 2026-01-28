@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+
 import {
   Box,
   Paper,
@@ -25,6 +25,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  CircularProgress,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -33,106 +34,21 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Resizer from 'react-image-file-resizer';
 
-const categoriesObj = {
-  fragrance: {
-    label: 'Fragrance',
-    subcategories: {
-      fragrance: { label: 'Fragrance', types: ['Men', 'Women', 'Uni'] },
-      carFresheners: { label: 'Car Air Fresheners', types: [] },
-      homeFresheners: { label: 'Home Air Fresheners', types: [] },
-      deodorant: { label: 'Deodorant', types: [] },
-    },
-  },
-  makeup: {
-    label: 'Makeup',
-    subcategories: {
-      face: {
-        label: 'Face',
-        types: [
-          'Foundation',
-          'Highlighter',
-          'Face Primer',
-          'Powder & Setting Spray',
-          'Contour',
-          'Blush',
-          'Concealer',
-          'BB & CC cream',
-        ],
-      },
-      eye: { label: 'Eye', types: ['Brow Gel', 'Eye Palettes', 'Eyebrow Pencil', 'Eyeliner', 'Pencil'] },
-      lip: {
-        label: 'Lip',
-        types: ['Lipstick', 'Liquid Lipstick', 'Lip Balm & Treatment', 'Lip Gloss', 'Lip Liner', 'Lip Oil'],
-      },
-    },
-  },
-  skincare: {
-    label: 'Skincare',
-    subcategories: {
-      cleansers: {
-        label: 'Cleansers',
-        types: ['Cleansers', 'Exfoliation', 'Face Wash', 'Makeup Removers', 'Toners & Lotions'],
-      },
-      eyeCare: { label: 'Eye Care', types: ['Dark Circles', 'Eye Patches', 'Lifting/Anti-age Eye Creams'] },
-      masks: { label: 'Masks', types: ['Anti-age', 'Eye Patches', 'Face Masks', 'Hydrating'] },
-      moisturizers: {
-        label: 'Moisturizers',
-        types: [
-          'Face Serums',
-          'Face Creams',
-          'Face Oils',
-          'Mists',
-          'Moisturizers',
-          'Night Creams',
-          'Anti-Aging',
-          'Dark Spots',
-          'Lifting',
-        ],
-      },
-    },
-  },
-  bathBody: {
-    label: 'Bath & Body',
-    subcategories: {
-      bathShower: {
-        label: 'Bath & Shower',
-        types: ['Gel', 'Hand Wash & Soap', 'Scrub & Exfoliation', 'Shampoo & Conditioner'],
-      },
-      bodyCare: {
-        label: 'Body Care',
-        types: [
-          'Antiperspirants',
-          'Body Lotion & Body Oils',
-          'Body Moisturizers',
-          'Cellulite & Stretch Marks',
-          'Hand Cream & Foot Cream',
-          'Masks & Special Treatment',
-        ],
-      },
-    },
-  },
-  hair: {
-    label: 'Hair',
-    subcategories: {
-      hairStyling: {
-        label: 'Hair Styling',
-        types: ['Gel', 'Hair Treatments', 'Styling Products', 'Shampoo & Conditioner'],
-      },
-    },
-  },
-  nail: {
-    label: 'Nail',
-    subcategories: {
-      nail: { label: 'Nail', types: ['Cuticle care', 'Nail care', 'Nail color', 'Nail polish removers'] },
-    },
-  },
-  accessories: { label: 'Accessories', subcategories: { accessories: { label: 'Accessories', types: [] } } },
-  collection: {
-    label: 'Collection',
-    subcategories: { collection: { label: 'Collection', types: ['Fragrance', 'Makeup', 'Skincare'] } },
-  },
-};
+import { db, storage } from '../../../../../../firebase';
+import {
+  doc,
+  getDoc,
+  collection,
+  setDoc,
+  updateDoc,
+  arrayUnion,
+  runTransaction,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { useState, useEffect } from 'react';
 
+// const categoriesObj = { ... } // Removed hardcoded object replaced by state
 const units = ['ml', 'g', 'kg', 'l', 'pcs'];
 
 const initialFormState = {
@@ -156,6 +72,10 @@ const initialFormState = {
   customFields: [],
   productOptions: [],
   variants: [],
+  // Fragrance specific
+  topNotes: [],
+  middleNotes: [],
+  baseNotes: [],
 };
 
 const generateVariants = (options, existingVariants, basePrice, baseQuantity) => {
@@ -201,10 +121,32 @@ const generateVariants = (options, existingVariants, basePrice, baseQuantity) =>
 
 export default function AddProductPage() {
   const [formData, setFormData] = useState(initialFormState);
+  const [categoriesObj, setCategoriesObj] = useState({});
   const [availableSubcategories, setAvailableSubcategories] = useState({});
   const [availableTypes, setAvailableTypes] = useState([]);
   const [brands, setBrands] = useState([]);
-  console.log(formData);
+  const [sizes, setSizes] = useState([]);
+  const [availableNotes, setAvailableNotes] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch Categories on Mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const docRef = doc(db, 'config', 'categories');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setCategoriesObj(docSnap.data().categories || {});
+        } else {
+          console.error('No categories config found!');
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -221,33 +163,63 @@ export default function AddProductPage() {
     }));
   };
 
-  const handleCategoryChange = (e) => {
-    const categoryValue = e.target.value;
-    const categoryData = categoriesObj[categoryValue];
+  const handleCategoryChange = async (e) => {
+    const category = e.target.value;
 
+    // Reset dependent fields
     setFormData((prev) => ({
       ...prev,
-      category: categoryValue,
+      category,
       subcategory: '',
       type: '',
+      // Reset fragrance notes if changing away from fragrance, assuming fragrance is the logic trigger
+      ...(category !== 'fragrance' ? { topNotes: [], middleNotes: [], baseNotes: [] } : {}),
     }));
 
-    setAvailableSubcategories(categoryData ? categoryData.subcategories : {});
+    // Update subcategories from the local categoriesObj state
+    setAvailableSubcategories(categoriesObj[category]?.subcategories || {});
     setAvailableTypes([]);
-  };
+
+    // Fetch Category Specific Config (Brands, Sizes, Notes)
+    try {
+      const docRef = doc(db, 'config', category);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setBrands(data.brands || []);
+        // Ensure sizes are unique strings to prevent Autocomplete key errors
+        const uniqueSizes = [...new Set((data.sizes || []).map(String))];
+        setSizes(uniqueSizes);
+        setAvailableNotes(data.perfumeNotes || []);
+      } else {
+        setBrands([]);
+        setSizes([]);
+        setAvailableNotes([]);
+      }
+    } catch (err) {
+      console.error('Error fetching category details:', err);
+      setBrands([]);
+      setSizes([]);
+    }
+  };;
 
   const handleSubcategoryChange = (e) => {
-    const subcategoryValue = e.target.value;
-    const subcategoryData = availableSubcategories[subcategoryValue];
-
+    const subcategory = e.target.value;
     setFormData((prev) => ({
       ...prev,
-      subcategory: subcategoryValue,
+      subcategory,
       type: '',
     }));
 
-    setAvailableTypes(subcategoryData ? subcategoryData.types || [] : []);
-  };
+    // Access subcategories from state, safer
+    const subCatObj = availableSubcategories[subcategory];
+    if (subCatObj) {
+      setAvailableTypes(subCatObj.types || []);
+    } else {
+      setAvailableTypes([]);
+    }
+  };;
 
   const handleAutocompleteChange = (event, newValue) => {
     setFormData((prev) => ({
@@ -428,115 +400,348 @@ export default function AddProductPage() {
     setFormData((prev) => ({ ...prev, variants: updated }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Marked as async
     // 1. Basic Validation
-    if (!formData.category || !formData.brand || !formData.price) {
-      alert('Please fill in required fields (Category, Brand, Price)');
+    if (!formData.category) {
+      alert('Please select a Category');
+      return;
+    }
+    if (!formData.subcategory) {
+      alert('Please select a Subcategory');
+      return;
+    }
+    if (availableTypes.length > 0 && !formData.type) {
+      alert('Please select a Type');
+      return;
+    }
+    if (!formData.brand) {
+      alert('Please enter a Brand');
+      return;
+    }
+    if (!formData.price) {
+      alert('Please enter a Price');
       return;
     }
 
-    // 2. Prepare Variants with Unique IDs & Smart SKUs
-    let finalVariants = [];
-
-    // Helper to clean strings for SKU: " Dior Sauvage " -> "DIOR-SAUVAGE"
-    const cleanForSku = (str) =>
-      (str || '')
-        .toString()
-        .trim()
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, '-');
-    const baseSkuPart = `${cleanForSku(formData.brand)}-${cleanForSku(formData.model)}`;
-
+    // Validate Variants Prices
     if (formData.variants.length > 0) {
-      finalVariants = formData.variants.map((v, index) => {
-        // Generate automatic SKU if empty
-        // logic: BRAND-MODEL-ATTR1-ATTR2...
-        // e.g. DIOR-SAUVAGE-100ML-RED
-        const attrPart = Object.values(v.attributes).map(cleanForSku).join('-');
-        const autoSku = `${baseSkuPart}-${attrPart}`;
-
-        return {
-          id: crypto.randomUUID(),
-          sku: v.sku ? cleanForSku(v.sku) : autoSku,
-          price: parseFloat(v.price) || 0,
-          quantity: parseInt(v.quantity, 10) || 0,
-          attributes: v.attributes,
-          name: v.name,
-        };
-      });
-    } else {
-      // Simple product (no options)
-      finalVariants.push({
-        id: crypto.randomUUID(),
-        sku: `${baseSkuPart}-DEFAULT`, // or just baseSkuPart
-        price: parseFloat(formData.price) || 0,
-        quantity: parseInt(formData.quantity, 10) || 0,
-        attributes: {},
-        name: 'Default',
-      });
+      const invalidVariant = formData.variants.find((v) => !v.price || parseFloat(v.price) <= 0);
+      if (invalidVariant) {
+        alert(`Please enter a valid price for variant: ${invalidVariant.name}`);
+        return;
+      }
     }
 
-    // 3. Calculate Price Range for Sorting
-    // Important: We need min/max to sort products by "Starts from $50"
-    const prices = finalVariants.map((v) => v.price);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const totalStock = finalVariants.reduce((sum, v) => sum + v.quantity, 0);
+    setLoading(true);
 
-    // 4. Construct the Database Object
-    const productDataToSave = {
-      // Classification
-      category: formData.category,
-      subcategory: formData.subcategory,
-      type: formData.type,
+    try {
+      // 2. Prepare Variants with Unique IDs & Smart SKUs
+      let finalVariants = [];
 
-      // Basic Info
-      brand: formData.brand,
-      model: formData.model,
-      size: formData.size,
-      unit: formData.unit,
+      const cleanForSku = (str) =>
+        (str || '')
+          .toString()
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, '-');
+      const baseSkuPart = `${cleanForSku(formData.brand)}-${cleanForSku(formData.model)}`;
 
-      // Flags
-      inStock: totalStock > 0, // Auto-calculate based on variants
-      original: formData.original,
+      if (formData.variants.length > 0) {
+        finalVariants = formData.variants.map((v, index) => {
+          const attrPart = Object.values(v.attributes).map(cleanForSku).join('-');
+          const autoSku = `${baseSkuPart}-${attrPart}`;
+          return {
+            id: crypto.randomUUID(),
+            sku: v.sku ? cleanForSku(v.sku) : autoSku,
+            price: parseFloat(v.price) || 0,
+            quantity: parseInt(v.quantity, 10) || 0,
+            attributes: v.attributes,
+            name: v.name,
+            inStock: parseInt(v.quantity, 10) > 0,
+          };
+        });
+      } else {
+        finalVariants.push({
+          id: crypto.randomUUID(),
+          sku: `${baseSkuPart}-DEFAULT`,
+          price: parseFloat(formData.price) || 0,
+          quantity: parseInt(formData.quantity, 10) || 0,
+          attributes: {},
+          name: 'Default',
+          inStock: parseInt(formData.quantity, 10) > 0,
+        });
+      }
 
-      // Media
-      images: formData.images,
-      mainImage: formData.mainImage,
+      // 3. Logic for Search & Filters
 
-      // Content
-      description: {
-        am: formData.descriptionAm,
-        en: formData.descriptionEn,
-        ru: formData.descriptionRu,
-      },
+      // A. Slug Base (We will append ID later for 100% uniqueness)
+      const cleanSlug = (str) =>
+        (str || '')
+          .toString()
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      const slugBase = `${cleanSlug(formData.brand)}-${cleanSlug(formData.model)}-${cleanSlug(formData.type)}`;
 
-      // Metadata for UI
-      options: formData.productOptions.map((opt) => ({
-        name: opt.name,
-        values: opt.values,
-      })),
+      // B. Full Search Name (for UI display)
+      const searchName = `${formData.brand} ${formData.model} ${formData.type || ''}`.trim();
 
-      // The Variants
-      variants: finalVariants,
+      // C. Generate Keywords (Multi-Language + Transliteration logic can go here later)
+      // We combine Brand, Model, Type, Categories AND Description text from all languages
+      const combinedText = [
+        formData.brand,
+        formData.model,
+        formData.type,
+        formData.category,
+        formData.subcategory,
+        formData.descriptionEn, // Index English
+        formData.descriptionRu, // Index Russian
+        formData.descriptionAm, // Index Armenian
+      ].join(' ');
 
-      // CRITICAL FOR SORTING:
-      price: minPrice, // Default sort price (cheapest option)
-      minPrice: minPrice, // For filtering "Price > X"
-      maxPrice: maxPrice, // For display "$50 - $100"
+      // Normalize: lowercase, split by space, remove short words
+      const uniqueKeywords = [
+        ...new Set(
+          combinedText
+            .toLowerCase()
+            .replace(/[^\p{L}0-9\s]/gu, '') // Keep Unicode letters & numbers
+            .split(/\s+/)
+            .filter((k) => k.length > 2), // Filter out "in", "at", "ev"
+        ),
+      ];
 
-      // Additional
-      customFields: formData.customFields.reduce((acc, curr) => {
-        if (curr.name) acc[curr.name] = curr.value;
-        return acc;
-      }, {}),
+      // D. Filter Aggregation (Save available colors/sizes as top-level arrays)
+      const aggregatedAttributes = {};
+      finalVariants.forEach((v) => {
+        Object.entries(v.attributes).forEach(([key, val]) => {
+          const filterKey = `filter_${key}`;
+          if (!aggregatedAttributes[filterKey]) aggregatedAttributes[filterKey] = new Set();
+          aggregatedAttributes[filterKey].add(val);
+        });
+      });
+      const filterData = {};
+      Object.keys(aggregatedAttributes).forEach((k) => {
+        filterData[k] = Array.from(aggregatedAttributes[k]);
+      });
 
-      createdAt: new Date().toISOString(),
-    };
+      // E. Combine Perfume Notes
+      let allNotes = [];
+      if (formData.category === 'fragrance') {
+        allNotes = [
+          ...(formData.topNotes || []),
+          ...(formData.middleNotes || []),
+          ...(formData.baseNotes || []),
+        ];
+        allNotes = [...new Set(allNotes)];
+      }
 
-    console.log('FINAL DB OBJECT:', productDataToSave);
-    // Here you would call: await addDoc(collection(db, 'products'), productDataToSave);
-    alert('Product ready to save! Check console for object structure.');
+      // 4. Calculate Stats & Prices
+      const prices = finalVariants.map((v) => v.price);
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const totalStock = finalVariants.reduce((sum, v) => sum + v.quantity, 0);
+
+      // 5. Upload Images to Firebase Storage
+      const timestamp = Date.now();
+      const uploadPromises = formData.images.map(async (imgBase64, index) => {
+        if (typeof imgBase64 === 'string' && imgBase64.startsWith('http')) {
+          return imgBase64;
+        }
+        const imageRef = ref(storage, `products/${timestamp}-${index}`);
+        await uploadString(imageRef, imgBase64, 'data_url');
+        return await getDownloadURL(imageRef);
+      });
+
+      const imageUrls = await Promise.all(uploadPromises);
+      let mainImageUrl = imageUrls.length > 0 ? imageUrls[0] : '';
+
+      if (formData.mainImage) {
+        const mainIndex = formData.images.indexOf(formData.mainImage);
+        if (mainIndex !== -1 && imageUrls[mainIndex]) {
+          mainImageUrl = imageUrls[mainIndex];
+        }
+      }
+
+      // 6. Construct the Database Object
+      const productDataToSave = {
+        // Classification
+        category: formData.category,
+        subcategory: formData.subcategory,
+        type: formData.type,
+
+        // Basic Info
+        brand: formData.brand,
+        model: formData.model,
+        size: formData.size,
+        unit: formData.unit,
+
+        // Flags
+        inStock: totalStock > 0,
+        original: formData.original,
+
+        // Media
+        images: imageUrls,
+        mainImage: mainImageUrl,
+
+        // Content
+        description: {
+          am: formData.descriptionAm,
+          en: formData.descriptionEn,
+          ru: formData.descriptionRu,
+        },
+
+        // Fragrance Specifics
+        ...(formData.topNotes && formData.topNotes.length > 0 && { topNotes: formData.topNotes }),
+        ...(formData.middleNotes && formData.middleNotes.length > 0 && { middleNotes: formData.middleNotes }),
+        ...(formData.baseNotes && formData.baseNotes.length > 0 && { baseNotes: formData.baseNotes }),
+        ...(allNotes.length > 0 && { allPerfumeNotes: allNotes }),
+
+        // Metadata for UI
+        options: formData.productOptions.map((opt) => ({
+          name: opt.name,
+          values: opt.values,
+        })),
+
+        // The Variants
+        variants: finalVariants.map((v) => ({
+          ...v,
+          inStock: v.quantity > 0,
+        })),
+
+        // CRITICAL FOR SORTING:
+        price: minPrice, // Default sort price (cheapest option)
+        minPrice: minPrice, // For filtering "Price > X"
+        maxPrice: maxPrice, // For display "$50 - $100"
+
+        // --- SEARCH & SEO ---
+        searchName: searchName,
+        name: searchName,
+        slug: slugBase, // Base slug for now (will append ID in transaction)
+        keywords: uniqueKeywords.slice(0, 500), // Safety limit for Firestore array
+        ...filterData,
+
+        // --- STATS ---
+        salesCount: 0,
+        rating: 0,
+        reviewCount: 0,
+        views: 0,
+
+        // Additional
+        customFields: formData.customFields.reduce((acc, curr) => {
+          if (curr.name) acc[curr.name] = curr.value;
+          return acc;
+        }, {}),
+
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      console.log('FINAL DB OBJECT:', productDataToSave);
+
+      // 7. Save to Firestore with Sequential ID and Config Update
+      await runTransaction(db, async (transaction) => {
+        // READS MUST COME FIRST
+        const counterRef = doc(db, 'counters', 'products');
+        const counterDoc = await transaction.get(counterRef);
+
+        // --- LOGIC & WRITES ---
+
+        // A. Calculate New ID
+        let newCount = 1;
+        if (counterDoc.exists()) {
+          newCount = counterDoc.data().count + 1;
+        }
+        const newId = String(newCount).padStart(7, '0'); // "0000001"
+
+        // B. Config Updates (Brands/Sizes/Notes)
+        if (formData.category) {
+          const configRef = doc(db, 'config', formData.category);
+          const updates = {};
+
+          if (formData.brand) {
+            updates.brands = arrayUnion(formData.brand);
+          }
+
+          if (allNotes.length > 0) {
+            updates.perfumeNotes = arrayUnion(...allNotes);
+          }
+
+          const sizesToUpdate = new Set();
+          if (formData.size) sizesToUpdate.add(String(formData.size));
+
+          formData.productOptions.forEach((opt) => {
+            if (opt.name && opt.name.trim().toLowerCase() === 'size') {
+              opt.values.forEach((v) => sizesToUpdate.add(String(v)));
+            }
+          });
+
+          if (sizesToUpdate.size > 0) {
+            updates.sizes = arrayUnion(...Array.from(sizesToUpdate));
+          }
+
+          if (Object.keys(updates).length > 0) {
+            transaction.set(configRef, updates, { merge: true });
+          }
+        }
+
+        // C. Save Product & Update Counter
+        if (!counterDoc.exists()) {
+          transaction.set(counterRef, { count: newCount });
+        } else {
+          transaction.update(counterRef, { count: newCount });
+        }
+
+        // --- FINAL SLUG GENERATION ---
+        const finalSlug = `${slugBase}-${newId}`;
+
+        const productRef = doc(db, 'products', newId);
+        const finalProductData = {
+          ...productDataToSave,
+          id: newId,
+          slug: finalSlug, // Overwrite with unique ID slug
+        };
+
+        transaction.set(productRef, finalProductData);
+        console.log('Transaction success. Product ID:', newId);
+      });
+
+      // Update Local States for immediate feedback without refresh
+      if (formData.brand && !brands.includes(formData.brand)) {
+        setBrands((prev) => [...prev, formData.brand]);
+      }
+
+      const sizesToUpdate = [];
+      if (formData.size && !sizes.includes(String(formData.size))) {
+        sizesToUpdate.push(String(formData.size));
+      }
+      formData.productOptions.forEach((opt) => {
+        if (opt.name && opt.name.trim().toLowerCase() === 'size') {
+          opt.values.forEach((v) => {
+            if (!sizes.includes(String(v))) sizesToUpdate.push(String(v));
+          });
+        }
+      });
+
+      if (sizesToUpdate.length > 0) {
+        setSizes((prev) => [...new Set([...prev, ...sizesToUpdate])]);
+      }
+
+      // alert('Product Saved Successfully!');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Reset Form but keep Category context
+      setFormData((prev) => ({
+        ...initialFormState,
+        category: prev.category,
+      }));
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert('Failed to save product. See console for details.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -614,7 +819,7 @@ export default function AddProductPage() {
               Basic Details
             </Typography>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 5 }}>
                 <Autocomplete
                   freeSolo
                   options={brands}
@@ -632,7 +837,8 @@ export default function AddProductPage() {
                   )}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+
+              <Grid size={{ xs: 12, md: 5 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -642,18 +848,25 @@ export default function AddProductPage() {
                   onChange={handleChange}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <TextField
-                  fullWidth
+              <Grid size={{ xs: 12, md: 2 }}>
+                <Autocomplete
+                  freeSolo
+                  options={sizes}
                   size="small"
-                  label="Size"
-                  name="size"
-                  type="number"
                   value={formData.size}
+                  onInputChange={(event, newInputValue) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      size: newInputValue,
+                    }));
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Size" size="small" fullWidth name="size" type="text" />
+                  )}
                   onChange={handleChange}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Unit</InputLabel>
                   <Select name="unit" label="Unit" value={formData.unit} onChange={handleChange}>
@@ -665,7 +878,7 @@ export default function AddProductPage() {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -677,7 +890,7 @@ export default function AddProductPage() {
                   inputProps={{ min: 0 }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -689,7 +902,7 @@ export default function AddProductPage() {
                   inputProps={{ min: 0, step: 0.01 }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -717,48 +930,49 @@ export default function AddProductPage() {
                   label="Original Product"
                 />
               </Grid>
+              {/* Fragrance Specific Notes */}
+              {availableNotes.length > 0 && (
+                <>
+                  <Grid size={{ xs: 12 }}>
+                    <Divider sx={{ my: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Fragrance Notes
+                      </Typography>
+                    </Divider>
+                  </Grid>
+                  {['topNotes', 'middleNotes', 'baseNotes'].map((noteField) => (
+                    <Grid size={{ xs: 12, md: 4 }} key={noteField}>
+                      <Autocomplete
+                        multiple
+                        freeSolo
+                        options={availableNotes}
+                        size="small"
+                        value={formData[noteField]}
+                        onChange={(event, newValue) => {
+                          setFormData((prev) => ({ ...prev, [noteField]: newValue }));
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label={noteField
+                              .replace(/([A-Z])/g, ' $1')
+                              .replace(/^./, (str) => str.toUpperCase())}
+                            size="small"
+                            fullWidth
+                          />
+                        )}
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => {
+                            const { key, ...tagProps } = getTagProps({ index });
+                            return <Chip key={key} size="small" label={option} {...tagProps} />;
+                          })
+                        }
+                      />
+                    </Grid>
+                  ))}
+                </>
+              )}
             </Grid>
-          </Paper>
-        </Grid>
-
-        {/* Descriptions Section */}
-        <Grid size={{ xs: 12 }}>
-          <Paper sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant="h6" gutterBottom>
-              Description
-            </Typography>
-            <Stack spacing={2}>
-              <TextField
-                fullWidth
-                size="small"
-                multiline
-                rows={3}
-                label="Description (Armenian)"
-                name="descriptionAm"
-                value={formData.descriptionAm}
-                onChange={handleChange}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                multiline
-                rows={3}
-                label="Description (English)"
-                name="descriptionEn"
-                value={formData.descriptionEn}
-                onChange={handleChange}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                multiline
-                rows={3}
-                label="Description (Russian)"
-                name="descriptionRu"
-                value={formData.descriptionRu}
-                onChange={handleChange}
-              />
-            </Stack>
           </Paper>
         </Grid>
 
@@ -837,19 +1051,45 @@ export default function AddProductPage() {
                     </Grid>
                     <Grid size={{ xs: 12, md: 7 }}>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <TextField
-                          size="small"
-                          label="Add Value"
-                          value={option.currentValue || ''}
-                          onChange={(e) => handleOptionValueInputChange(index, e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddOptionValue(index);
-                            }
-                          }}
-                          sx={{ flexGrow: 1 }}
-                        />
+                        {option.name && option.name.trim().toLowerCase() === 'size' ? (
+                          <Autocomplete
+                            freeSolo
+                            options={[...new Set(sizes.map(String))]}
+                            size="small"
+                            sx={{ flexGrow: 1 }}
+                            inputValue={option.currentValue || ''}
+                            onInputChange={(event, newInputValue) => {
+                              handleOptionValueInputChange(index, newInputValue);
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="Add Value"
+                                size="small"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddOptionValue(index);
+                                  }
+                                }}
+                              />
+                            )}
+                          />
+                        ) : (
+                          <TextField
+                            size="small"
+                            label="Add Value"
+                            value={option.currentValue || ''}
+                            onChange={(e) => handleOptionValueInputChange(index, e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddOptionValue(index);
+                              }
+                            }}
+                            sx={{ flexGrow: 1 }}
+                          />
+                        )}
                         <Button variant="contained" size="small" onClick={() => handleAddOptionValue(index)}>
                           Add
                         </Button>
@@ -933,6 +1173,47 @@ export default function AddProductPage() {
           </Grid>
         )}
 
+        {/* Descriptions Section */}
+        <Grid size={{ xs: 12 }}>
+          <Paper sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography variant="h6" gutterBottom>
+              Description
+            </Typography>
+            <Stack spacing={2}>
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={3}
+                label="Description (Armenian)"
+                name="descriptionAm"
+                value={formData.descriptionAm}
+                onChange={handleChange}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={3}
+                label="Description (English)"
+                name="descriptionEn"
+                value={formData.descriptionEn}
+                onChange={handleChange}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={3}
+                label="Description (Russian)"
+                name="descriptionRu"
+                value={formData.descriptionRu}
+                onChange={handleChange}
+              />
+            </Stack>
+          </Paper>
+        </Grid>
+
         {/* Images Placeholder */}
         <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: { xs: 2, md: 3 } }}>
@@ -1015,11 +1296,18 @@ export default function AddProductPage() {
         {/* Action Buttons */}
         <Grid size={{ xs: 12 }}>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button variant="outlined" color="secondary">
+            <Button variant="outlined" color="secondary" disabled={loading}>
               Cancel
             </Button>
-            <Button variant="contained" color="primary" onClick={handleSave} size="large">
-              Save Product
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSave}
+              size="large"
+              disabled={loading}
+              startIcon={loading && <CircularProgress size={20} color="inherit" />}
+            >
+              {loading ? 'Saving...' : 'Save Product'}
             </Button>
           </Box>
         </Grid>
