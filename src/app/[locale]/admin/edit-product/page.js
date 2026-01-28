@@ -36,7 +36,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchIcon from '@mui/icons-material/Search';
 import Resizer from 'react-image-file-resizer';
 
-import { db, storage } from '../../../../../../firebase';
+import { db, storage } from '../../../../../firebase';
 import {
   doc,
   getDoc,

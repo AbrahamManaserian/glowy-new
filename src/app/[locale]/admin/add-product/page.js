@@ -1,6 +1,5 @@
 'use client';
 
-
 import {
   Box,
   Paper,
@@ -35,7 +34,7 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Resizer from 'react-image-file-resizer';
 
-import { db, storage } from '../../../../../../firebase';
+import { db, storage } from '../../../../../firebase';
 import {
   doc,
   getDoc,
@@ -205,7 +204,7 @@ export default function AddProductPage() {
       setBrands([]);
       setSizes([]);
     }
-  };;
+  };
 
   const handleSubcategoryChange = (e) => {
     const subcategory = e.target.value;
@@ -222,7 +221,7 @@ export default function AddProductPage() {
     } else {
       setAvailableTypes([]);
     }
-  };;
+  };
 
   const handleAutocompleteChange = (event, newValue) => {
     setFormData((prev) => ({

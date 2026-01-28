@@ -18,18 +18,13 @@ import ListItemText from '@mui/material/ListItemText';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import PeopleIcon from '@mui/icons-material/People';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import LayersIcon from '@mui/icons-material/Layers';
 import Link from 'next/link';
-import InventoryIcon from '@mui/icons-material/Inventory';
+import { usePathname } from 'next/navigation';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
-import Collapse from '@mui/material/Collapse';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 const drawerWidth = 240;
@@ -46,9 +41,9 @@ const defaultTheme = createTheme();
 
 export default function AdminLayout({ children }) {
   const isMobile = useMediaQuery(defaultTheme.breakpoints.down('sm'));
+  const pathname = usePathname();
   const [open, setOpen] = React.useState(!isMobile);
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [productsOpen, setProductsOpen] = React.useState(false);
 
   // Sync open state with screen size if needed, or rely on distinct mobileOpen
   React.useEffect(() => {
@@ -85,10 +80,6 @@ export default function AdminLayout({ children }) {
     window.addEventListener('click', handleGlobalClick, { capture: true });
     return () => window.removeEventListener('click', handleGlobalClick, { capture: true });
   }, [isMobile, mobileOpen]);
-
-  const handleProductsClick = () => {
-    setProductsOpen(!productsOpen);
-  };
 
   return (
     <ThemeProvider theme={defaultTheme}>
@@ -163,87 +154,95 @@ export default function AdminLayout({ children }) {
           )}
           <Divider />
           <List component="nav">
-            <ListItemButton component={Link} href="/admin/dashboard" onClick={closeMobileDrawer}>
+            <ListItemButton
+              selected={pathname === '/admin/dashboard'}
+              component={Link}
+              href="/admin/dashboard"
+              onClick={closeMobileDrawer}
+            >
               <ListItemIcon>
                 <DashboardIcon />
               </ListItemIcon>
               <ListItemText primary="Dashboard" />
             </ListItemButton>
-            <ListItemButton component={Link} href="/admin/orders" onClick={closeMobileDrawer}>
+            <ListItemButton
+              selected={pathname === '/admin/orders'}
+              component={Link}
+              href="/admin/orders"
+              onClick={closeMobileDrawer}
+            >
               <ListItemIcon>
                 <ShoppingCartIcon />
               </ListItemIcon>
               <ListItemText primary="Orders" />
             </ListItemButton>
-            <ListItemButton component={Link} href="/admin/users" onClick={closeMobileDrawer}>
+            <ListItemButton
+              selected={pathname === '/admin/users'}
+              component={Link}
+              href="/admin/users"
+              onClick={closeMobileDrawer}
+            >
               <ListItemIcon>
                 <PeopleIcon />
               </ListItemIcon>
               <ListItemText primary="Users" />
             </ListItemButton>
-            <ListItemButton component={Link} href="/admin/suppliers" onClick={closeMobileDrawer}>
+            <ListItemButton
+              selected={pathname === '/admin/suppliers'}
+              component={Link}
+              href="/admin/suppliers"
+              onClick={closeMobileDrawer}
+            >
               <ListItemIcon>
                 <LocalShippingIcon />
               </ListItemIcon>
               <ListItemText primary="Suppliers" />
             </ListItemButton>
-            <ListItemButton component={Link} href="/admin/analytics" onClick={closeMobileDrawer}>
+            <ListItemButton
+              selected={pathname === '/admin/analytics'}
+              component={Link}
+              href="/admin/analytics"
+              onClick={closeMobileDrawer}
+            >
               <ListItemIcon>
                 <AssessmentIcon />
               </ListItemIcon>
               <ListItemText primary="Analytics" />
             </ListItemButton>
-            <ListItemButton component={Link} href="/admin/settings" onClick={closeMobileDrawer}>
+            <ListItemButton
+              selected={pathname === '/admin/settings'}
+              component={Link}
+              href="/admin/settings"
+              onClick={closeMobileDrawer}
+            >
               <ListItemIcon>
                 <SettingsIcon />
               </ListItemIcon>
               <ListItemText primary="Settings" />
             </ListItemButton>
 
-            <ListItemButton onClick={handleProductsClick}>
+            <ListItemButton
+              selected={pathname === '/admin/add-product'}
+              component={Link}
+              href="/admin/add-product"
+              onClick={closeMobileDrawer}
+            >
               <ListItemIcon>
-                <InventoryIcon />
+                <AddIcon />
               </ListItemIcon>
-              <ListItemText primary="Products" />
-              {productsOpen ? <ExpandLess /> : <ExpandMore />}
+              <ListItemText primary="Add Product" />
             </ListItemButton>
-            <Collapse in={productsOpen} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                <ListItemButton
-                  sx={{ pl: 4 }}
-                  component={Link}
-                  href="/admin/products"
-                  onClick={closeMobileDrawer}
-                >
-                  <ListItemIcon>
-                    <LayersIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="All Products" />
-                </ListItemButton>
-                <ListItemButton
-                  sx={{ pl: 4 }}
-                  component={Link}
-                  href="/admin/products/add"
-                  onClick={closeMobileDrawer}
-                >
-                  <ListItemIcon>
-                    <AddIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Add Product" />
-                </ListItemButton>
-                <ListItemButton
-                  sx={{ pl: 4 }}
-                  component={Link}
-                  href="/admin/products/edit"
-                  onClick={closeMobileDrawer}
-                >
-                  <ListItemIcon>
-                    <EditIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Edit Product" />
-                </ListItemButton>
-              </List>
-            </Collapse>
+            <ListItemButton
+              selected={pathname === '/admin/edit-product'}
+              component={Link}
+              href="/admin/edit-product"
+              onClick={closeMobileDrawer}
+            >
+              <ListItemIcon>
+                <EditIcon />
+              </ListItemIcon>
+              <ListItemText primary="Edit Product" />
+            </ListItemButton>
           </List>
         </Drawer>
         <Box
