@@ -61,6 +61,7 @@ const initialFormState = {
   unit: '',
   price: '',
   previousPrice: '',
+  discount: '',
   quantity: 1,
   images: [],
   mainImage: '',
@@ -79,7 +80,7 @@ const initialFormState = {
   baseNotes: [],
 };
 
-const generateVariants = (options, existingVariants, basePrice, baseQuantity) => {
+const generateVariants = (options, existingVariants, basePrice, baseQuantity, baseDiscount) => {
   const validOptions = options.filter((o) => o.values.length > 0);
   if (validOptions.length === 0) return [];
 
@@ -108,13 +109,18 @@ const generateVariants = (options, existingVariants, basePrice, baseQuantity) =>
 
     const existing = existingVariants.find((v) => v.name === uniqueKey);
 
-    if (existing) return existing;
+    if (existing) {
+      // preserving existing overrides if they exist, but maybe we want to sync global discount if needed?
+      // For now, simple return existing.
+      return existing;
+    }
 
     return {
       name: uniqueKey,
       attributes,
       price: basePrice || '',
       quantity: baseQuantity || '',
+      discount: baseDiscount || '0',
       sku: '',
     };
   });
@@ -392,7 +398,13 @@ export default function AddProductPage() {
 
   const handleDeleteOption = (index) => {
     const updated = formData.productOptions.filter((_, i) => i !== index);
-    const newVariants = generateVariants(updated, formData.variants, formData.price, formData.quantity);
+    const newVariants = generateVariants(
+      updated,
+      formData.variants,
+      formData.price,
+      formData.quantity,
+      formData.discount,
+    );
     setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
   };
 
@@ -410,7 +422,13 @@ export default function AddProductPage() {
     }
 
     // For simplicity, we regenerate.
-    const newVariants = generateVariants(updated, formData.variants, formData.price, formData.quantity);
+    const newVariants = generateVariants(
+      updated,
+      formData.variants,
+      formData.price,
+      formData.quantity,
+      formData.discount,
+    );
     setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
   };
 
@@ -427,7 +445,13 @@ export default function AddProductPage() {
       updated[index].values.push(val);
       updated[index].currentValue = '';
 
-      const newVariants = generateVariants(updated, formData.variants, formData.price, formData.quantity);
+      const newVariants = generateVariants(
+        updated,
+        formData.variants,
+        formData.price,
+        formData.quantity,
+        formData.discount,
+      );
       setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
     }
   };
@@ -436,7 +460,13 @@ export default function AddProductPage() {
     const updated = [...formData.productOptions];
     updated[optionIndex].values = updated[optionIndex].values.filter((v) => v !== valueToDelete);
 
-    const newVariants = generateVariants(updated, formData.variants, formData.price, formData.quantity);
+    const newVariants = generateVariants(
+      updated,
+      formData.variants,
+      formData.price,
+      formData.quantity,
+      formData.discount,
+    );
     setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
   };
 
@@ -501,10 +531,16 @@ export default function AddProductPage() {
             id: crypto.randomUUID(),
             sku: v.sku ? cleanForSku(v.sku) : autoSku,
             price: parseFloat(v.price) || 0,
+            discount: parseFloat(v.discount) || 0,
             quantity: parseInt(v.quantity, 10) || 0,
             attributes: v.attributes,
             name: v.name,
             inStock: parseInt(v.quantity, 10) > 0,
+            // Initialize stats
+            salesCount: 0,
+            rating: 0,
+            reviewCount: 0,
+            views: 0,
           };
         });
       } else {
@@ -512,10 +548,15 @@ export default function AddProductPage() {
           id: crypto.randomUUID(),
           sku: `${baseSkuPart}-DEFAULT`,
           price: parseFloat(formData.price) || 0,
+          discount: parseFloat(formData.discount) || 0,
           quantity: parseInt(formData.quantity, 10) || 0,
           attributes: {},
           name: 'Default',
           inStock: parseInt(formData.quantity, 10) > 0,
+          salesCount: 0,
+          rating: 0,
+          reviewCount: 0,
+          views: 0,
         });
       }
 
@@ -647,6 +688,7 @@ export default function AddProductPage() {
         model: formData.model,
         size: formData.size,
         unit: formData.unit,
+        discount: parseFloat(formData.discount) || 0,
 
         // Flags
         inStock: totalStock > 0,
@@ -986,7 +1028,26 @@ export default function AddProductPage() {
                   inputProps={{ min: 0, step: 0.01 }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  label="Discount (%)"
+                  name="discount"
+                  value={formData.discount}
+                  onChange={(e) => {
+                    // When global discount changes, update new variants if any, but `handleChange` does that automatically via setFormData.
+                    // Wait, we need to decide if changing global discount retroactively updates variants.
+                    // The user requirement: "inherit by default". This usually implies "at creation time".
+                    // But if I change global discount, should I update variants? Probably safer not to overwrite user overrides unless specific action.
+                    // However, passing it to `handleChange` updates state. The variants generation happens when OPTIONS change.
+                    handleChange(e);
+                  }}
+                  inputProps={{ min: 0, max: 100 }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <FormControlLabel
                   control={
                     <Checkbox checked={formData.inStock} onChange={handleCheckboxChange} name="inStock" />
@@ -994,7 +1055,7 @@ export default function AddProductPage() {
                   label="In Stock"
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <FormControlLabel
                   control={
                     <Checkbox checked={formData.original} onChange={handleCheckboxChange} name="original" />
@@ -1201,8 +1262,9 @@ export default function AddProductPage() {
                   <TableHead>
                     <TableRow>
                       <TableCell>Variant</TableCell>
-                      <TableCell width="25%">Price</TableCell>
-                      <TableCell width="20%">Quantity</TableCell>
+                      <TableCell width="20%">Price</TableCell>
+                      <TableCell width="15%">Quantity</TableCell>
+                      <TableCell width="15%">Discount (%)</TableCell>
                       <TableCell width="35%">SKU</TableCell>
                     </TableRow>
                   </TableHead>
@@ -1226,6 +1288,15 @@ export default function AddProductPage() {
                             fullWidth
                             value={variant.quantity}
                             onChange={(e) => handleVariantChange(index, 'quantity', e.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            fullWidth
+                            value={variant.discount}
+                            onChange={(e) => handleVariantChange(index, 'discount', e.target.value)}
                           />
                         </TableCell>
                         <TableCell>
