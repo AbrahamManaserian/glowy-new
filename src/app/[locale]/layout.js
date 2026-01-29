@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import theme from '../../theme';
 import { AuthContextProvider } from '../../context/AuthContext';
+import { CategoriesProvider } from '../../context/CategoriesContext';
 import '../globals.css';
 import LayoutContent from './LayoutContent';
 
@@ -26,7 +27,9 @@ export default async function CreateLayout({ children, params }) {
           <NextIntlClientProvider messages={messages}>
             <ThemeProvider theme={theme}>
               <AuthContextProvider>
-                <LayoutContent locale={locale}>{children}</LayoutContent>
+                <CategoriesProvider>
+                  <LayoutContent locale={locale}>{children}</LayoutContent>
+                </CategoriesProvider>
               </AuthContextProvider>
             </ThemeProvider>
           </NextIntlClientProvider>
