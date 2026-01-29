@@ -574,6 +574,7 @@ export default function AddProductPage() {
 
       // B. Full Search Name (for UI display)
       const searchName = `${formData.brand} ${formData.model} ${formData.type || ''}`.trim();
+      const name = `${formData.brand} ${formData.model}`.trim();
 
       // C. Generate Keywords (Multi-Language + Transliteration logic can go here later)
       // We combine Brand, Model, Type, Categories AND Description text from all languages
@@ -731,7 +732,7 @@ export default function AddProductPage() {
 
         // --- SEARCH & SEO ---
         searchName: searchName,
-        name: searchName,
+        name: name,
         slug: slugBase, // Base slug for now (will append ID in transaction)
         keywords: uniqueKeywords.slice(0, 500), // Safety limit for Firestore array
         ...filterData,

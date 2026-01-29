@@ -716,6 +716,7 @@ export default function EditProductPage() {
       const slugBase = `${cleanSlug(formData.brand)}-${cleanSlug(formData.model)}-${cleanSlug(formData.type)}`;
 
       const searchName = `${formData.brand} ${formData.model} ${formData.type || ''}`.trim();
+      const name = `${formData.brand} ${formData.model} `.trim();
 
       const combinedText = [
         formData.brand,
@@ -898,7 +899,7 @@ export default function EditProductPage() {
         maxPrice: maxPrice,
 
         searchName: searchName,
-        name: searchName,
+        name: name,
         // Update Slug (Keep ID)
         slug: `${slugBase}-${currentProductId}`,
         keywords: uniqueKeywords.slice(0, 500),
