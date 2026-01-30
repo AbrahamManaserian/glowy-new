@@ -50,6 +50,129 @@ const languages = [
   { code: 'ru', label: 'Русский' },
 ];
 
+const MobileCategoryItem = ({
+  catKey,
+  category,
+  isExpanded,
+  onToggle,
+  onLinkClick,
+  tCats,
+  tCommon,
+  setRef,
+}) => {
+  const searchParams = useSearchParams();
+  const currentCat = searchParams.get('category');
+  const currentSub = searchParams.get('subcategory');
+  const currentType = searchParams.get('type')?.trim();
+
+  const hasSub = category.subcategories && Object.keys(category.subcategories).length > 0;
+  const isCatActive = currentCat === catKey;
+
+  return (
+    <div ref={(el) => setRef(catKey, el)}>
+      <ListItemButton
+        sx={{ pl: 4, borderBottom: '1px solid', borderColor: 'divider' }}
+        onClick={() => (hasSub ? onToggle(catKey) : onLinkClick())}
+        component={!hasSub ? Link : 'div'} // Only Link if no subcategories (leaf)
+        href={!hasSub ? `/shop?category=${catKey}` : undefined}
+      >
+        <ListItemText
+          primary={tCats.has(catKey) ? tCats(catKey) : category.label}
+          primaryTypographyProps={{
+            sx: { color: isCatActive ? 'var(--active-color)' : 'inherit' },
+            // fontWeight: isCatActive ? 'bold' : 'normal',
+          }}
+        />
+        {hasSub ? isExpanded ? <ExpandLess /> : <ExpandMore /> : null}
+      </ListItemButton>
+
+      {/* Nested Subcategories */}
+      {hasSub && (
+        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding sx={{ bgcolor: 'action.hover' }}>
+            {/* "All Items" Link for Category */}
+            <ListItemButton
+              sx={{ pl: 6 }}
+              component={Link}
+              href={`/shop?category=${catKey}`}
+              onClick={onLinkClick}
+            >
+              <ListItemText
+                primary={tCommon('allItems') || 'All Items'}
+                primaryTypographyProps={{
+                  variant: 'body2',
+                  fontWeight: isCatActive && !currentSub ? 700 : 600,
+                  sx: { color: isCatActive && !currentSub ? 'var(--active-color)' : 'inherit' },
+                }}
+              />
+            </ListItemButton>
+
+            {Object.keys(category.subcategories).map((subKey) => {
+              const subCat = category.subcategories[subKey];
+              // Active if matches subcategory
+              const isSubActive = currentCat === catKey && currentSub === subKey;
+
+              return (
+                <Box key={subKey} sx={{ pl: 6, pr: 2, py: 1 }}>
+                  {/* Subcategory Title is now clickable */}
+                  <Link
+                    href={`/shop?category=${catKey}&subcategory=${subKey}`}
+                    onClick={onLinkClick}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 'bold',
+                        mb: 1,
+                        color: isSubActive ? 'var(--active-color)' : 'inherit',
+                        '&:hover': { textDecoration: 'underline' },
+                      }}
+                    >
+                      {tCats.has(subKey) ? tCats(subKey) : subCat.label}
+                    </Typography>
+                  </Link>
+
+                  {subCat.types &&
+                    subCat.types.map((type) => {
+                      // Active if matches type
+                      const isTypeActive =
+                        currentCat === catKey && currentSub === subKey && currentType === type;
+                      return (
+                        <Box
+                          key={type}
+                          component={Link}
+                          href={`/shop?category=${catKey}&subcategory=${subKey}&type=${encodeURIComponent(
+                            type,
+                          )}`}
+                          onClick={onLinkClick}
+                          sx={{
+                            display: 'block',
+                            py: 1, // Increased spacing
+                            color: isTypeActive ? 'var(--active-color)' : 'text.secondary',
+                            // fontWeight: isTypeActive ? 'bold' : 'normal',
+                            textDecoration: 'none',
+                            fontSize: '0.9rem',
+                            pl: 1,
+                            borderLeft: '1px solid',
+                            borderColor: isTypeActive ? 'var(--active-color)' : 'divider',
+                            ml: 0.5,
+                          }}
+                        >
+                          {tCats.has(type) ? tCats(type) : type}
+                        </Box>
+                      );
+                    })}
+                </Box>
+              );
+            })}
+          </List>
+        </Collapse>
+      )}
+    </div>
+  );
+};
+
 function Navbar({ locale }) {
   const t = useTranslations('Navigation');
   const tCats = useTranslations('CategoryNames');
@@ -71,9 +194,46 @@ function Navbar({ locale }) {
   // Mobile Category State
   const [catsOpen, setCatsOpen] = useState(true); // Open "All Categories" by default? Or closed.
   const [mobileExpandedCat, setMobileExpandedCat] = useState(null); // Track expanded categories
+  const categoryRefs = React.useRef({}); // Map of category keys to DOM nodes
 
   const handleMobileCatToggle = (key) => {
-    setMobileExpandedCat((prev) => (prev === key ? null : key));
+    // If clicking the same one, just close it immediately.
+    if (mobileExpandedCat === key) {
+      setMobileExpandedCat(null);
+      return;
+    }
+
+    const performOpen = () => {
+      const element = categoryRefs.current[key];
+      if (element) {
+        const scrollContainer = element.closest('.MuiDrawer-paper');
+        if (scrollContainer) {
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const nodeRect = element.getBoundingClientRect();
+          const currentScrollTop = scrollContainer.scrollTop;
+
+          // Calculate distance to move to align to top
+          const diff = nodeRect.top - containerRect.top;
+
+          // Scroll instantly to avoid "overshoot" or delays
+          scrollContainer.scrollTop = currentScrollTop + diff;
+        }
+      }
+      setMobileExpandedCat(key);
+    };
+
+    if (mobileExpandedCat) {
+      // If another is open, close it first
+      setMobileExpandedCat(null);
+      // Wait for collapse animation (MUI default ~300ms)
+      // Standardize wait to ensure layout is stable
+      setTimeout(() => {
+        performOpen();
+      }, 300);
+    } else {
+      // Nothing open, just open the new one
+      performOpen();
+    }
   };
 
   const handleDrawerToggle = () => {
@@ -84,6 +244,7 @@ function Navbar({ locale }) {
   const handleLinkClick = () => {
     setMobileOpen(false);
     setMobileUserMenuOpen(false);
+    setMobileExpandedCat(null); // Reset category expansion
     if (anchorElUser) setAnchorElUser(null);
   };
 
@@ -124,7 +285,10 @@ function Navbar({ locale }) {
         {/* All Categories Section (Desktop Mega Menu equivalent) */}
         <ListItemButton
           onClick={() => setCatsOpen(!catsOpen)}
-          sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+          sx={{
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
         >
           <ListItemText
             primary={tCategories('title') || 'All Categories'}
@@ -135,120 +299,19 @@ function Navbar({ locale }) {
         <Collapse in={catsOpen} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             {/* Dynamically Loaded Categories */}
-            {Object.keys(categories).map((catKey) => {
-              const category = categories[catKey];
-              const isExpanded = mobileExpandedCat === catKey;
-              const hasSub = category.subcategories && Object.keys(category.subcategories).length > 0;
-              const currentCat = searchParams.get('category');
-              const currentSub = searchParams.get('subcategory');
-              // Trim to handle potential spacing issues in URL params
-              const currentType = searchParams.get('type')?.trim();
-
-              // Active if matches category (parent highlight)
-              const isCatActive = currentCat === catKey;
-
-              return (
-                <React.Fragment key={catKey}>
-                  <ListItemButton
-                    sx={{ pl: 4, borderBottom: '1px solid', borderColor: 'divider' }}
-                    onClick={() => (hasSub ? handleMobileCatToggle(catKey) : handleLinkClick())}
-                    component={!hasSub ? Link : 'div'} // Only Link if no subcategories (leaf)
-                    href={!hasSub ? `/shop?category=${catKey}` : undefined}
-                  >
-                    <ListItemText
-                      primary={tCats.has(catKey) ? tCats(catKey) : category.label}
-                      primaryTypographyProps={{
-                        sx: { color: isCatActive ? 'var(--active-color)' : 'inherit' },
-                        fontWeight: isCatActive ? 'bold' : 'normal',
-                      }}
-                    />
-                    {hasSub ? isExpanded ? <ExpandLess /> : <ExpandMore /> : null}
-                  </ListItemButton>
-
-                  {/* Nested Subcategories */}
-                  {hasSub && (
-                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                      <List component="div" disablePadding sx={{ bgcolor: 'action.hover' }}>
-                        {/* "All Items" Link for Category */}
-                        <ListItemButton
-                          sx={{ pl: 6 }}
-                          component={Link}
-                          href={`/shop?category=${catKey}`}
-                          onClick={handleLinkClick}
-                        >
-                          <ListItemText
-                            primary={tCommon('allItems') || 'All Items'}
-                            primaryTypographyProps={{
-                              variant: 'body2',
-                              fontWeight: isCatActive && !currentSub ? 700 : 600,
-                              sx: { color: isCatActive && !currentSub ? 'var(--active-color)' : 'inherit' },
-                            }}
-                          />
-                        </ListItemButton>
-
-                        {Object.keys(category.subcategories).map((subKey) => {
-                          const subCat = category.subcategories[subKey];
-                          // Active if matches subcategory
-                          const isSubActive = currentCat === catKey && currentSub === subKey;
-
-                          return (
-                            <Box key={subKey} sx={{ pl: 6, pr: 2, py: 1 }}>
-                              {/* Subcategory Title is now clickable */}
-                              <Link
-                                href={`/shop?category=${catKey}&subcategory=${subKey}`}
-                                onClick={handleLinkClick}
-                                style={{ textDecoration: 'none', color: 'inherit' }}
-                              >
-                                <Typography
-                                  variant="subtitle2"
-                                  sx={{
-                                    fontWeight: 'bold',
-                                    mb: 1,
-                                    color: isSubActive ? 'var(--active-color)' : 'inherit',
-                                    '&:hover': { textDecoration: 'underline' },
-                                  }}
-                                >
-                                  {tCats.has(subKey) ? tCats(subKey) : subCat.label}
-                                </Typography>
-                              </Link>
-
-                              {subCat.types &&
-                                subCat.types.map((type) => {
-                                  // Active if matches type
-                                  const isTypeActive =
-                                    currentCat === catKey && currentSub === subKey && currentType === type;
-                                  return (
-                                    <Box
-                                      key={type}
-                                      component={Link}
-                                      href={`/shop?category=${catKey}&subcategory=${subKey}&type=${encodeURIComponent(type)}`}
-                                      onClick={handleLinkClick}
-                                      sx={{
-                                        display: 'block',
-                                        py: 1, // Increased spacing
-                                        color: isTypeActive ? 'var(--active-color)' : 'text.secondary',
-                                        fontWeight: isTypeActive ? 'bold' : 'normal',
-                                        textDecoration: 'none',
-                                        fontSize: '0.9rem',
-                                        pl: 1,
-                                        borderLeft: '1px solid',
-                                        borderColor: isTypeActive ? 'var(--active-color)' : 'divider',
-                                        ml: 0.5,
-                                      }}
-                                    >
-                                      {tCats.has(type) ? tCats(type) : type}
-                                    </Box>
-                                  );
-                                })}
-                            </Box>
-                          );
-                        })}
-                      </List>
-                    </Collapse>
-                  )}
-                </React.Fragment>
-              );
-            })}
+            {Object.keys(categories).map((catKey) => (
+              <MobileCategoryItem
+                key={catKey}
+                catKey={catKey}
+                category={categories[catKey]}
+                isExpanded={mobileExpandedCat === catKey}
+                onToggle={handleMobileCatToggle}
+                onLinkClick={handleLinkClick}
+                tCats={tCats}
+                tCommon={tCommon}
+                setRef={(key, el) => (categoryRefs.current[key] = el)}
+              />
+            ))}
           </List>
         </Collapse>
 
@@ -372,144 +435,142 @@ function Navbar({ locale }) {
       color="inherit"
       elevation={0}
       sx={{
-        borderBottom: '1px solid #eaeaea',
         bgcolor: 'background.paper',
         top: 0,
         zIndex: (theme) => theme.zIndex.drawer + 1, // Ensure AppBar is above Drawer
       }}
     >
-      <Container maxWidth="xl">
-        <Toolbar disableGutters>
-          {/* Mobile Menu Icon */}
-          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-            <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleDrawerToggle}
-              color="inherit"
-            >
-              <MenuIcon />
-            </IconButton>
-          </Box>
-
-          {/* Desktop Logo */}
-          <Typography
-            variant="h6"
-            noWrap
-            component={Link}
-            href="/"
-            sx={{
-              mr: 2,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'monospace',
-              fontWeight: 300,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-              fontSize: '1.5rem',
-            }}
+      <Toolbar sx={{ px: '10px' }} disableGutters>
+        {/* Mobile Menu Icon */}
+        <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
+          <IconButton
+            size="large"
+            aria-label="account of current user"
+            aria-controls="menu-appbar"
+            aria-haspopup="true"
+            onClick={handleDrawerToggle}
+            color="inherit"
+            sx={{ p: '5px' }}
           >
-            GLOWY
-          </Typography>
+            <MenuIcon />
+          </IconButton>
+        </Box>
 
-          {/* Mobile Logo (Centered) */}
-          <Typography
-            variant="h5"
-            noWrap
-            component={Link}
-            href="/"
-            onClick={handleLinkClick}
-            sx={{
-              mr: 2,
-              display: { xs: 'flex', md: 'none' },
-              flexGrow: 1,
-              fontFamily: 'monospace',
-              fontWeight: 300,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-              fontSize: '1.2rem',
-            }}
-          >
-            GLOWY
-          </Typography>
+        {/* Desktop Logo */}
+        <Typography
+          variant="h6"
+          noWrap
+          component={Link}
+          href="/"
+          sx={{
+            mr: 2,
+            display: { xs: 'none', md: 'flex' },
+            fontFamily: 'monospace',
+            fontWeight: 300,
+            letterSpacing: '.3rem',
+            color: 'inherit',
+            textDecoration: 'none',
+            fontSize: '1.5rem',
+          }}
+        >
+          GLOWY
+        </Typography>
 
-          {/* Desktop Menu */}
-          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, justifyContent: 'center', gap: 2 }}>
-            {navItems.map((item) => {
-              const path = getPath(item);
-              const isActive = pathname === path;
-              return (
-                <Button
-                  key={item}
-                  component={Link}
-                  href={path}
-                  sx={{
-                    my: 2,
+        {/* Mobile Logo (Centered) */}
+        <Typography
+          variant="h5"
+          noWrap
+          component={Link}
+          href="/"
+          onClick={handleLinkClick}
+          sx={{
+            mr: 2,
+            display: { xs: 'flex', md: 'none' },
+            flexGrow: 1,
+            fontFamily: 'monospace',
+            fontWeight: 300,
+            letterSpacing: '.3rem',
+            color: 'inherit',
+            textDecoration: 'none',
+            fontSize: '1.2rem',
+          }}
+        >
+          GLOWY
+        </Typography>
+
+        {/* Desktop Menu */}
+        <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, justifyContent: 'center', gap: 2 }}>
+          {navItems.map((item) => {
+            const path = getPath(item);
+            const isActive = pathname === path;
+            return (
+              <Button
+                key={item}
+                component={Link}
+                href={path}
+                sx={{
+                  my: 2,
+                  color: isActive ? 'var(--active-color)' : 'text.primary',
+                  display: 'block',
+                  fontWeight: 400,
+                  letterSpacing: '0.05rem',
+                  textTransform: 'capitalize',
+                  '&:hover': {
+                    backgroundColor: 'transparent',
+                    textDecoration: 'underline',
                     color: isActive ? 'var(--active-color)' : 'text.primary',
-                    display: 'block',
-                    fontWeight: 400,
-                    letterSpacing: '0.05rem',
-                    textTransform: 'capitalize',
-                    '&:hover': {
-                      backgroundColor: 'transparent',
-                      textDecoration: 'underline',
-                      color: isActive ? 'var(--active-color)' : 'text.primary',
-                    },
-                  }}
-                >
-                  {t(item)}
-                </Button>
-              );
-            })}
-          </Box>
-
-          {/* Actions (User Menu + Basket) */}
-          <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton sx={{ ml: 1 }} component={Link} href="/cart">
-              <ShoppingBasketIcon color="#000" size="24" />
-            </IconButton>
-            <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-              <Avatar
-                sx={{ bgcolor: 'transparent', color: '#000', width: 32, height: 32 }}
-                src={user?.photoURL}
-                alt={user?.displayName || 'User'}
-              >
-                {!user?.photoURL && <PersonOutlineIcon sx={{ fontSize: 27 }} />}
-              </Avatar>
-            </IconButton>
-
-            {/* Desktop User Menu */}
-            {!isMobile && (
-              <Menu
-                sx={{ mt: '45px' }}
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                anchorOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-                PaperProps={{
-                  style: {
-                    width: 250,
                   },
                 }}
               >
-                {renderUserMenuContent()}
-              </Menu>
-            )}
-          </Box>
-        </Toolbar>
-      </Container>
+                {t(item)}
+              </Button>
+            );
+          })}
+        </Box>
+
+        {/* Actions (User Menu + Basket) */}
+        <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton sx={{ ml: 1 }} component={Link} href="/cart">
+            <ShoppingBasketIcon color="#000" size="24" />
+          </IconButton>
+          <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+            <Avatar
+              sx={{ bgcolor: 'transparent', color: '#000', width: 32, height: 32 }}
+              src={user?.photoURL}
+              alt={user?.displayName || 'User'}
+            >
+              {!user?.photoURL && <PersonOutlineIcon sx={{ fontSize: 27 }} />}
+            </Avatar>
+          </IconButton>
+
+          {/* Desktop User Menu */}
+          {!isMobile && (
+            <Menu
+              sx={{ mt: '45px' }}
+              id="menu-appbar"
+              anchorEl={anchorElUser}
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              open={Boolean(anchorElUser)}
+              onClose={handleCloseUserMenu}
+              PaperProps={{
+                style: {
+                  width: 250,
+                },
+              }}
+            >
+              {renderUserMenuContent()}
+            </Menu>
+          )}
+        </Box>
+      </Toolbar>
 
       {/* Mobile Navigation Drawer */}
       <Drawer
