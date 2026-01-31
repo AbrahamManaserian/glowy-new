@@ -23,7 +23,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { useCategories } from '../context/CategoriesContext';
 import { useTranslations } from 'next-intl';
-import { useRouter } from '../i18n/routing';
+import { useRouter } from '../i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 
 const Search = styled('div')(({ theme }) => ({

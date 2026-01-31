@@ -13,7 +13,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
-import { useRouter } from '../i18n/routing';
+import { useRouter } from '../i18n/navigation';
 
 const AuthContext = createContext({});
 

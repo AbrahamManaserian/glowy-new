@@ -20,13 +20,15 @@ import {
   TextField,
   Paper,
   Chip,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { styled } from '@mui/material/styles';
 import { useTranslations } from 'next-intl';
 import { useCategories } from '../../context/CategoriesContext';
-import { useRouter } from '../../i18n/routing';
+import { useRouter } from '../../i18n/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 
@@ -101,6 +103,8 @@ export default function FilterSidebar({
   const t = useTranslations('Shop');
   const tCats = useTranslations('CategoryNames');
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Local state for sidebar inputs before applying
   const [localFilters, setLocalFilters] = useState(currentFilters);
@@ -212,7 +216,7 @@ export default function FilterSidebar({
   const notesRef = useRef(null);
 
   const handleScrollToElement = (ref) => {
-    if (ref.current) {
+    if (isMobile && ref.current) {
       setTimeout(() => {
         ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
@@ -253,7 +257,7 @@ export default function FilterSidebar({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
       {/* Filters Area */}
-      <Box sx={{ p: 2, pb: '300px' }}>
+      <Box sx={{ pb: '300px' }}>
         {/* Price Filter */}
         <Box sx={{ mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -348,7 +352,7 @@ export default function FilterSidebar({
                 ? tCats.has(activeCategoryKey)
                   ? tCats(activeCategoryKey)
                   : activeCategoryData.label || activeCategoryKey
-                : 'Categories'}
+                : t('categories')}
             </Typography>
           </CustomAccordionSummary>
           <AccordionDetails>
@@ -487,6 +491,10 @@ export default function FilterSidebar({
             renderInput={(params) => (
               <TextField
                 {...params}
+                inputProps={{
+                  ...params.inputProps,
+                  inputMode: isMobile ? 'none' : 'text',
+                }}
                 variant="outlined"
                 size="small"
                 placeholder={t('select_brands')}
@@ -529,6 +537,10 @@ export default function FilterSidebar({
             renderInput={(params) => (
               <TextField
                 {...params}
+                inputProps={{
+                  ...params.inputProps,
+                  inputMode: isMobile ? 'none' : 'text',
+                }}
                 variant="outlined"
                 size="small"
                 placeholder={t('select_size')}
@@ -571,6 +583,10 @@ export default function FilterSidebar({
               renderInput={(params) => (
                 <TextField
                   {...params}
+                  inputProps={{
+                    ...params.inputProps,
+                    inputMode: isMobile ? 'none' : 'text',
+                  }}
                   variant="outlined"
                   size="small"
                   placeholder={t('select_notes')}

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Box, Card, CardMedia, CardContent, Typography, Button, Rating, Chip } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { useRouter } from '../../i18n/routing';
+import { useRouter } from '../../i18n/navigation';
 
 const dummyProducts = [
   {
@@ -62,17 +62,18 @@ const dummyProducts = [
   },
 ];
 
-export default function ProductGrid({ filters, sortBy }) {
+export default function ProductGrid({ products, filters, sortBy }) {
   const router = useRouter();
 
-  // In a real app, we would fetch/filter data here based on props
+  // If products are passed, usage them, else use dummy (or empty)
+  const displayProducts = products || [];
 
   return (
     <Box sx={{ flexGrow: 1, p: 2 }}>
-      {/* Product Count & Sort (Usually passed down, but assuming grid handles display) */}
+      {/* Product Count & Sort */}
 
       <Grid container spacing={3}>
-        {dummyProducts.map((product) => (
+        {displayProducts.map((product) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={product.id}>
             <Card
               elevation={0}
@@ -130,7 +131,7 @@ export default function ProductGrid({ filters, sortBy }) {
         ))}
       </Grid>
 
-      {dummyProducts.length === 0 && (
+      {displayProducts.length === 0 && (
         <Box sx={{ py: 10, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary">
             No products found

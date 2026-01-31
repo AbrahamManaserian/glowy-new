@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Link, useRouter } from '../../../i18n/routing';
+import { Link, useRouter } from '../../../i18n/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import {
