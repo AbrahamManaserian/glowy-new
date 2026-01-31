@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useRouter } from '../../../i18n/routing';
+import { useRouter, usePathname } from '../../../i18n/routing';
 import { useTranslations } from 'next-intl';
 import {
   Box,
@@ -17,8 +17,6 @@ import {
   Button,
   Drawer,
   IconButton,
-  Stack,
-  Chip,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -29,13 +27,17 @@ import FilterSidebar from '../../../components/Shop/FilterSidebar';
 import ProductGrid from '../../../components/Shop/ProductGrid';
 
 import { useCategories } from '../../../context/CategoriesContext';
+import { useUI } from '../../../context/UIContext';
 
 export default function ShopPage() {
   const t = useTranslations('Shop');
   const tPages = useTranslations('Pages');
+  const tCats = useTranslations('CategoryNames');
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { categories } = useCategories(); // Get categories for labels
+  const { activeMobileMenu, toggleMenu, closeMobileMenus } = useUI();
 
   // Determine if we have active filters/params
   // Note: 'page' and 'sort' might be params but don't necessarily trigger "Detailed Filter View" if that's what user means.
@@ -54,8 +56,13 @@ export default function ShopPage() {
     ].includes(key),
   );
 
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileOpen = activeMobileMenu === 'filter';
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    closeMobileMenus();
+  }, [pathname]);
 
   // State for filters derived from URL
   const [filters, setFilters] = useState({
@@ -87,7 +94,7 @@ export default function ShopPage() {
   }, [searchParams]);
 
   const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+    toggleMenu('filter');
   };
 
   const handleSortChange = (event) => {
@@ -98,7 +105,7 @@ export default function ShopPage() {
 
   const handleApplyFilters = (newFilters) => {
     updateUrl({ ...newFilters, sort: sortBy });
-    setMobileOpen(false);
+    closeMobileMenus();
   };
 
   const handleResetFilters = () => {
@@ -142,27 +149,24 @@ export default function ShopPage() {
   };
 
   // Breadcrumbs
-  const breadcrumbs = [
-    <Link
-      key="home"
-      underline="hover"
-      color="inherit"
-      onClick={() => router.push('/')}
-      sx={{ cursor: 'pointer' }}
-    >
-      Home
-    </Link>,
-  ];
+  const breadcrumbs = [];
 
   const activeCategory = filters.categories?.[0];
   const activeSubCategory = filters.subcategories?.[0];
   const activeTypes = filters.types || [];
 
   // Data helpers
-  const categoryLabel = activeCategory ? categories[activeCategory]?.label || activeCategory : null;
+  const categoryLabel = activeCategory
+    ? tCats.has(activeCategory)
+      ? tCats(activeCategory)
+      : categories[activeCategory]?.label
+    : null;
+
   const subCategoryLabel =
-    activeCategory && activeSubCategory && categories[activeCategory]?.subcategories?.[activeSubCategory]
-      ? categories[activeCategory].subcategories[activeSubCategory].label || activeSubCategory
+    activeCategory && activeSubCategory
+      ? tCats.has(activeSubCategory)
+        ? tCats(activeSubCategory)
+        : categories[activeCategory]?.subcategories?.[activeSubCategory]?.label || activeSubCategory
       : activeSubCategory;
 
   // 1. Shop Link/Text
@@ -175,13 +179,13 @@ export default function ShopPage() {
         onClick={() => router.push('/shop')}
         sx={{ cursor: 'pointer' }}
       >
-        Shop
+        {t('title')}
       </Link>,
     );
   } else {
     breadcrumbs.push(
       <Typography key="shop" color="text.primary">
-        Shop
+        {t('title')}
       </Typography>,
     );
   }
@@ -236,7 +240,7 @@ export default function ShopPage() {
   if (activeTypes.length > 0) {
     breadcrumbs.push(
       <Typography key="types" color="text.primary">
-        {activeTypes.join(', ')}
+        {activeTypes.map((type) => (tCats.has(type) ? tCats(type) : type)).join(', ')}
       </Typography>,
     );
   }
@@ -259,49 +263,49 @@ export default function ShopPage() {
           }}
         >
           <Typography variant="h4" component="h1" fontWeight="bold">
-            {activeCategory ? categoryLabel : 'Shop'}
+            {activeCategory ? categoryLabel : t('title')}
           </Typography>
 
-          {/* Mobile Filter Button */}
-          <Button
-            variant="outlined"
-            startIcon={<FilterListIcon />}
-            onClick={handleDrawerToggle}
-            sx={{ display: { md: 'none' } }}
-          >
-            Filter
-          </Button>
-
-          {/* Sort By */}
+          {/* Desktop Sort By */}
           <FormControl size="small" sx={{ minWidth: 150, display: { xs: 'none', md: 'inline-flex' } }}>
-            <InputLabel>Sort by</InputLabel>
-            <Select value={sortBy} label="Sort by" onChange={handleSortChange}>
-              <MenuItem value="default">Default</MenuItem>
-              <MenuItem value="price-asc">Price: Low to High</MenuItem>
-              <MenuItem value="price-desc">Price: High to Low</MenuItem>
-              <MenuItem value="newest">Newest</MenuItem>
-              <MenuItem value="oldest">Oldest</MenuItem>
+            <InputLabel>{t('sort_by')}</InputLabel>
+            <Select value={sortBy} label={t('sort_by')} onChange={handleSortChange}>
+              <MenuItem value="default">{t('sort.default')}</MenuItem>
+              <MenuItem value="price-asc">{t('sort.price_asc')}</MenuItem>
+              <MenuItem value="price-desc">{t('sort.price_desc')}</MenuItem>
+              <MenuItem value="newest">{t('sort.newest')}</MenuItem>
+              <MenuItem value="oldest">{t('sort.oldest')}</MenuItem>
             </Select>
           </FormControl>
         </Box>
 
-        {/* Mobile Sort display (optional, separate line) */}
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, mt: 2, justifyContent: 'flex-end' }}>
-          <FormControl size="small" fullWidth>
-            <InputLabel>Sort by</InputLabel>
-            <Select value={sortBy} label="Sort by" onChange={handleSortChange}>
-              <MenuItem value="default">Default</MenuItem>
-              <MenuItem value="price-asc">Price: Low to High</MenuItem>
-              <MenuItem value="price-desc">Price: High to Low</MenuItem>
-              <MenuItem value="newest">Newest</MenuItem>
-              <MenuItem value="oldest">Oldest</MenuItem>
+        {/* Mobile Filter & Sort Row */}
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, gap: 2, mt: 2 }}>
+          <Button
+            fullWidth
+            size="small"
+            variant="outlined"
+            startIcon={<FilterListIcon />}
+            onClick={handleDrawerToggle}
+            sx={{ flex: 1 }}
+          >
+            {t('filter')}
+          </Button>
+          <FormControl size="small" sx={{ flex: 1.6 }}>
+            <InputLabel>{t('sort_by')}</InputLabel>
+            <Select value={sortBy} label={t('sort_by')} onChange={handleSortChange}>
+              <MenuItem value="default">{t('sort.default')}</MenuItem>
+              <MenuItem value="price-asc">{t('sort.price_asc')}</MenuItem>
+              <MenuItem value="price-desc">{t('sort.price_desc')}</MenuItem>
+              <MenuItem value="newest">{t('sort.newest')}</MenuItem>
+              <MenuItem value="oldest">{t('sort.oldest')}</MenuItem>
             </Select>
           </FormControl>
         </Box>
 
         {hasParams && (
           <Button size="small" color="error" onClick={handleResetFilters} sx={{ mt: 1 }}>
-            Reset filters
+            {t('reset_filters')}
           </Button>
         )}
       </Box>
@@ -325,21 +329,47 @@ export default function ShopPage() {
           ModalProps={{ keepMounted: true }} // Better open performance on mobile
           sx={{
             display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280, height: '100%' },
+            zIndex: (theme) => theme.zIndex.drawer,
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
+              width: '100%',
+              top: { xs: '56px', sm: '64px' },
+              height: { xs: 'calc(100% - 56px)', sm: 'calc(100% - 64px)' },
+              boxShadow: 'none',
+            },
+            '& .MuiBackdrop-root': {
+              top: { xs: '56px', sm: '64px' },
+            },
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              p: 1,
+              position: 'sticky',
+              top: 0,
+              bgcolor: 'background.paper',
+              zIndex: 1,
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+          >
+            <Typography variant="h6" fontWeight="bold" sx={{ ml: 2 }}>
+              {t('filter')}
+            </Typography>
             <IconButton onClick={handleDrawerToggle}>
               <CloseIcon />
             </IconButton>
           </Box>
-          <Box sx={{ height: 'calc(100% - 50px)' }}>
+          <Box sx={{ height: 'calc(100% - 60px)' }}>
             <FilterSidebar
               currentFilters={filters}
               showDetailedFilters={true}
               onApplyFilters={(f) => {
                 handleApplyFilters(f);
-                setMobileOpen(false);
+                closeMobileMenus();
               }}
               onResetFilters={handleResetFilters}
             />

@@ -136,5 +136,35 @@
     "forgot_password": "Забыли пароль?",
     "success_login": "Успешный вход",
     "success_signup": "Успешная регистрация"
+  },
+  "Shop": {
+    "title": "Магазин",
+    "filter": "Фильтр",
+    "sort_by": "Сортировать",
+    "sort": {
+      "default": "По умолчанию",
+      "price_asc": "Цена: по возрастанию",
+      "price_desc": "Цена: по убыванию",
+      "newest": "Новые",
+      "oldest": "Старые"
+    },
+    "reset_filters": "Сбросить",
+    "price": "Цена",
+    "reset": "Сброс",
+    "min": "Мин",
+    "max": "Макс",
+    "discounted": "Со скидкой",
+    "categories": "Категории",
+    "back_to_categories": "Назад к категориям",
+    "type": "Тип",
+    "brands": "Бренды",
+    "select_brands": "Выберите бренды",
+    "size": "Размер",
+    "select_size": "Выберите размер",
+    "notes": "Ноты",
+    "select_notes": "Выберите ноты",
+    "original_brand": "Оригинал",
+    "only_stock": "В наличии",
+    "apply_filters": "Применить"
   }
 }

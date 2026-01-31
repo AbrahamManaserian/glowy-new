@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -24,6 +24,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { styled } from '@mui/material/styles';
+import { useTranslations } from 'next-intl';
 import { useCategories } from '../../context/CategoriesContext';
 import { useRouter } from '../../i18n/routing';
 import { doc, getDoc } from 'firebase/firestore';
@@ -97,6 +98,8 @@ export default function FilterSidebar({
   onResetFilters,
 }) {
   const { categories, loading } = useCategories();
+  const t = useTranslations('Shop');
+  const tCats = useTranslations('CategoryNames');
   const router = useRouter();
 
   // Local state for sidebar inputs before applying
@@ -122,7 +125,11 @@ export default function FilterSidebar({
 
   const handleAutocompleteChange = (field, newValue) => {
     updateFilter(field, newValue);
-  };
+    // Close keyboard on mobile on select
+    if (typeof document !== 'undefined' && document.activeElement) {
+      document.activeElement.blur();
+    }
+  };;
 
   const handleCategoryClick = (key) => {
     // Single select: Replace entire array. Reset subcats and types.
@@ -200,6 +207,18 @@ export default function FilterSidebar({
   const [sizeOptions, setSizeOptions] = useState([]);
   const [perfumeNotes, setPerfumeNotes] = useState([]);
 
+  const brandRef = useRef(null);
+  const sizeRef = useRef(null);
+  const notesRef = useRef(null);
+
+  const handleScrollToElement = (ref) => {
+    if (ref.current) {
+      setTimeout(() => {
+        ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  };
+
   useEffect(() => {
     const fetchCategoryConfig = async () => {
       if (activeCategoryKey) {
@@ -236,10 +255,10 @@ export default function FilterSidebar({
       {/* Filters Area */}
       <Box sx={{ p: 2 }}>
         {/* Price Filter */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography gutterBottom variant="subtitle2" fontWeight="bold">
-              Price
+              {t('price')}
             </Typography>
             <Button
               size="small"
@@ -252,7 +271,7 @@ export default function FilterSidebar({
                 '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
               }}
             >
-              Reset
+              {t('reset')}
             </Button>
           </Box>
           <Box sx={{ px: 1 }}>
@@ -274,10 +293,10 @@ export default function FilterSidebar({
             />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
               <Typography variant="caption" color="text.secondary">
-                Min: ${localFilters.priceRange?.[0]}
+                {t('min')}: ${localFilters.priceRange?.[0]}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Max: ${localFilters.priceRange?.[1]}
+                {t('max')}: ${localFilters.priceRange?.[1]}
               </Typography>
             </Box>
           </Box>
@@ -293,7 +312,7 @@ export default function FilterSidebar({
               onChange={() => handleToggleChange('discounted')}
             />
           }
-          label={<Typography variant="body2">Discounted Products</Typography>}
+          label={<Typography variant="body2">{t('discounted')}</Typography>}
           sx={{
             mb: 2,
             display: 'flex',
@@ -325,7 +344,11 @@ export default function FilterSidebar({
             }
           >
             <Typography variant="subtitle2" fontWeight="bold">
-              {activeCategoryData ? activeCategoryData.label || activeCategoryKey : 'Categories'}
+              {activeCategoryData
+                ? tCats.has(activeCategoryKey)
+                  ? tCats(activeCategoryKey)
+                  : activeCategoryData.label || activeCategoryKey
+                : 'Categories'}
             </Typography>
           </CustomAccordionSummary>
           <AccordionDetails>
@@ -343,11 +366,16 @@ export default function FilterSidebar({
                         sx={{
                           color: 'text.secondary',
                           '&.Mui-checked': { color: 'var(--active-color)' },
+                          py: 0.5,
                         }}
                       />
                     }
-                    label={val.label || key}
-                    sx={{ display: 'flex', width: '100%' }}
+                    label={
+                      <Typography variant="body1" sx={{ mt: '1px' }}>
+                        {tCats.has(key) ? tCats(key) : val.label || key}
+                      </Typography>
+                    }
+                    sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', mb: 1 }}
                   />
                 ))}
                 <Button
@@ -357,7 +385,7 @@ export default function FilterSidebar({
                   }
                   sx={{ mt: 1, textTransform: 'none', color: 'var(--active-color)' }}
                 >
-                  Back to Categories
+                  {t('back_to_categories')}
                 </Button>
               </>
             ) : (
@@ -373,11 +401,16 @@ export default function FilterSidebar({
                       sx={{
                         color: 'text.secondary',
                         '&.Mui-checked': { color: 'var(--active-color)' },
+                        py: 0.5,
                       }}
                     />
                   }
-                  label={val.label || key}
-                  sx={{ display: 'flex', width: '100%' }}
+                  label={
+                    <Typography variant="body1" sx={{ mt: '1px' }}>
+                      {tCats.has(key) ? tCats(key) : val.label || key}
+                    </Typography>
+                  }
+                  sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', mb: 1 }}
                 />
               ))
             )}
@@ -407,7 +440,7 @@ export default function FilterSidebar({
                 }
               >
                 <Typography variant="subtitle2" fontWeight="bold">
-                  Type
+                  {t('type')}
                 </Typography>
               </CustomAccordionSummary>
               <AccordionDetails>
@@ -422,11 +455,16 @@ export default function FilterSidebar({
                         sx={{
                           color: 'text.secondary',
                           '&.Mui-checked': { color: 'var(--active-color)' },
+                          py: 0.5,
                         }}
                       />
                     }
-                    label={type}
-                    sx={{ display: 'flex', width: '100%' }}
+                    label={
+                      <Typography variant="body1" sx={{ mt: '1px' }}>
+                        {tCats.has(type) ? tCats(type) : type}
+                      </Typography>
+                    }
+                    sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', mb: 1 }}
                   />
                 ))}
               </AccordionDetails>
@@ -436,12 +474,13 @@ export default function FilterSidebar({
         )}
 
         {/* Brands Autocomplete */}
-        <Box sx={{ mb: 2, mt: 2 }}>
+        <Box sx={{ mb: 2, mt: 2 }} ref={brandRef}>
           <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-            Brands
+            {t('brands')}
           </Typography>
           <Autocomplete
             multiple
+            onOpen={() => handleScrollToElement(brandRef)}
             options={brandOptions}
             value={localFilters.brands || []}
             onChange={(e, val) => handleAutocompleteChange('brands', val)}
@@ -450,7 +489,7 @@ export default function FilterSidebar({
                 {...params}
                 variant="outlined"
                 size="small"
-                placeholder="Select brands"
+                placeholder={t('select_brands')}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '&.Mui-focused fieldset': {
@@ -477,12 +516,13 @@ export default function FilterSidebar({
         </Box>
 
         {/* Size Autocomplete */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 3 }} ref={sizeRef}>
           <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-            Size
+            {t('size')}
           </Typography>
           <Autocomplete
             multiple
+            onOpen={() => handleScrollToElement(sizeRef)}
             options={sizeOptions}
             value={localFilters.sizes || []}
             onChange={(e, val) => handleAutocompleteChange('sizes', val)}
@@ -491,7 +531,7 @@ export default function FilterSidebar({
                 {...params}
                 variant="outlined"
                 size="small"
-                placeholder="Select size"
+                placeholder={t('select_size')}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '&.Mui-focused fieldset': {
@@ -518,12 +558,13 @@ export default function FilterSidebar({
         </Box>
 
         {activeCategoryKey === 'fragrance' && perfumeNotes.length > 0 && (
-          <Box sx={{ mb: 3 }}>
+          <Box sx={{ mb: 3 }} ref={notesRef}>
             <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-              Notes
+              {t('notes')}
             </Typography>
             <Autocomplete
               multiple
+              onOpen={() => handleScrollToElement(notesRef)}
               options={perfumeNotes}
               value={localFilters.notes || []}
               onChange={(e, val) => handleAutocompleteChange('notes', val)}
@@ -532,7 +573,7 @@ export default function FilterSidebar({
                   {...params}
                   variant="outlined"
                   size="small"
-                  placeholder="Select notes"
+                  placeholder={t('select_notes')}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '&.Mui-focused fieldset': {
@@ -573,7 +614,7 @@ export default function FilterSidebar({
               checkedColor="#2196F3"
             />
           }
-          label={<Typography variant="body2">Original Brand</Typography>}
+          label={<Typography variant="body2">{t('original_brand')}</Typography>}
           sx={{
             mb: 1,
             display: 'flex',
@@ -590,7 +631,7 @@ export default function FilterSidebar({
               checkedColor="#4CAF50"
             />
           }
-          label={<Typography variant="body2">Only in Stock</Typography>}
+          label={<Typography variant="body2">{t('only_stock')}</Typography>}
           sx={{
             mb: 2,
             display: 'flex',
@@ -609,17 +650,11 @@ export default function FilterSidebar({
           color="primary"
           onClick={() => onApplyFilters(localFilters)}
           sx={{
-            // bgcolor: 'var(--active-color)',
-
-            // mb: '10px',
             zIndex: 10,
             borderRadius: '15px',
-            // mb: '10px',
-            // py: 2,
-            // '&:hover': { bgcolor: 'var(--active-color)', opacity: 0.9 },
           }}
         >
-          Apply Filters
+          {t('apply_filters')}
         </Button>
       </Box>
     </Box>

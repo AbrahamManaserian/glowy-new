@@ -41,6 +41,7 @@ import { ShoppingBasketIcon } from './ShoppingBasketIcon';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCategories } from '../context/CategoriesContext';
+import { useUI } from '../context/UIContext';
 
 
 const navItems = ['shop', 'sale', 'gift cards', 'about'];
@@ -185,9 +186,11 @@ function Navbar({ locale }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { categories } = useCategories();
+  const { activeMobileMenu, toggleMenu, closeMobileMenus } = useUI();
 
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileUserMenuOpen, setMobileUserMenuOpen] = useState(false);
+  const mobileOpen = activeMobileMenu === 'nav';
+  const mobileUserMenuOpen = activeMobileMenu === 'user';
+
   const [anchorElUser, setAnchorElUser] = useState(null);
   const [langOpen, setLangOpen] = useState(false);
 
@@ -237,21 +240,18 @@ function Navbar({ locale }) {
   };
 
   const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-    if (mobileUserMenuOpen) setMobileUserMenuOpen(false);
+    toggleMenu('nav');
   };
 
   const handleLinkClick = () => {
-    setMobileOpen(false);
-    setMobileUserMenuOpen(false);
+    closeMobileMenus();
     setMobileExpandedCat(null); // Reset category expansion
     if (anchorElUser) setAnchorElUser(null);
   };
 
   const handleOpenUserMenu = (event) => {
     if (isMobile) {
-      setMobileUserMenuOpen(!mobileUserMenuOpen);
-      if (mobileOpen) setMobileOpen(false);
+      toggleMenu('user');
     } else {
       setAnchorElUser(event.currentTarget);
       setLangOpen(false);
@@ -260,7 +260,7 @@ function Navbar({ locale }) {
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
-    setMobileUserMenuOpen(false);
+    closeMobileMenus();
   };
 
   const changeLanguage = (newLocale) => {
@@ -436,6 +436,7 @@ function Navbar({ locale }) {
       elevation={0}
       sx={{
         bgcolor: 'background.paper',
+
         top: 0,
         zIndex: (theme) => theme.zIndex.drawer + 1, // Ensure AppBar is above Drawer
       }}

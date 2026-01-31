@@ -136,5 +136,35 @@
     "forgot_password": "Forgot password?",
     "success_login": "Successfully signed in",
     "success_signup": "Successfully signed up"
+  },
+  "Shop": {
+    "title": "Shop",
+    "filter": "Filter",
+    "sort_by": "Sort by",
+    "sort": {
+      "default": "Default",
+      "price_asc": "Price: Low to High",
+      "price_desc": "Price: High to Low",
+      "newest": "Newest",
+      "oldest": "Oldest"
+    },
+    "reset_filters": "Reset filters",
+    "price": "Price",
+    "reset": "Reset",
+    "min": "Min",
+    "max": "Max",
+    "discounted": "Discounted Products",
+    "categories": "Categories",
+    "back_to_categories": "Back to Categories",
+    "type": "Type",
+    "brands": "Brands",
+    "select_brands": "Select brands",
+    "size": "Size",
+    "select_size": "Select size",
+    "notes": "Notes",
+    "select_notes": "Select notes",
+    "original_brand": "Original Brand",
+    "only_stock": "Only in Stock",
+    "apply_filters": "Apply Filters"
   }
 }
