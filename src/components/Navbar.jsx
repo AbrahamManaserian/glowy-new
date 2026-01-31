@@ -436,12 +436,14 @@ function Navbar({ locale }) {
       elevation={0}
       sx={{
         bgcolor: 'background.paper',
+        boxShadow: (theme) =>
+          theme.palette.mode === 'dark' ? '0 2px 12px rgba(0,0,0,0.35)' : '0 2px 12px rgba(0,0,0,0.06)',
 
         top: 0,
         zIndex: (theme) => theme.zIndex.drawer + 1, // Ensure AppBar is above Drawer
       }}
     >
-      <Toolbar sx={{ px: { xss: '10px', sm: '20px' } }} disableGutters>
+      <Toolbar sx={{ px: { xs: '10px', sm: '20px' } }} disableGutters>
         {/* Mobile Menu Icon */}
         <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
           <IconButton

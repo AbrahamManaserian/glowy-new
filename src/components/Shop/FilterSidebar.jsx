@@ -253,7 +253,7 @@ export default function FilterSidebar({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
       {/* Filters Area */}
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 2, pb: '300px' }}>
         {/* Price Filter */}
         <Box sx={{ mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
