@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import {
   Box,
   Typography,
@@ -12,15 +12,13 @@ import {
   AccordionSummary,
   AccordionDetails,
   Button,
-  List,
-  ListItem,
-  ListItemText,
   Divider,
   Autocomplete,
   TextField,
-  Paper,
   Chip,
   useMediaQuery,
+  Radio,
+  InputAdornment,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
@@ -36,8 +34,8 @@ const IOSSwitch = styled(
   (props) => <Switch focusVisibleClassName=".Mui-focusVisible" disableRipple {...props} />,
   { shouldForwardProp: (prop) => prop !== 'checkedColor' },
 )(({ theme, checkedColor }) => ({
-  width: 36,
-  height: 20,
+  width: 42,
+  height: 22,
   padding: 0,
   '& .MuiSwitch-switchBase': {
     padding: 0,
@@ -68,11 +66,11 @@ const IOSSwitch = styled(
   },
   '& .MuiSwitch-thumb': {
     boxSizing: 'border-box',
-    width: 16,
-    height: 16,
+    width: 19,
+    height: 19,
   },
   '& .MuiSwitch-track': {
-    borderRadius: 20 / 2,
+    borderRadius: 26 / 2,
     backgroundColor: theme.palette.mode === 'light' ? '#E9E9EA' : '#39393D',
     opacity: 1,
     transition: theme.transitions.create(['background-color'], {
@@ -87,22 +85,12 @@ const CustomAccordionSummary = styled(AccordionSummary)(({ theme }) => ({
   },
 }));
 
-const marks = [
-  { value: 0, label: '$0' },
-  { value: 1000, label: '$1000' },
-];
 
-export default function FilterSidebar({
-  currentFilters,
-  onFilterChange,
-  showDetailedFilters,
-  onApplyFilters,
-  onResetFilters,
-}) {
+
+const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
   const { categories, loading } = useCategories();
   const t = useTranslations('Shop');
   const tCats = useTranslations('CategoryNames');
-  const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -114,11 +102,32 @@ export default function FilterSidebar({
     setLocalFilters(currentFilters);
   }, [currentFilters]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      submit: () => {
+        onApplyFilters(localFilters);
+      },
+    }),
+    [localFilters, onApplyFilters],
+  );
+
   const handlePriceChange = (event, newValue) => {
     setLocalFilters({ ...localFilters, priceRange: newValue });
   };
 
-  // Helper to update local filters
+  const handleMinPriceChange = (e) => {
+    const val = e.target.value === '' ? '' : Number(e.target.value);
+    const max = localFilters.priceRange?.[1];
+    setLocalFilters({ ...localFilters, priceRange: [val, max] });
+  };
+
+  const handleMaxPriceChange = (e) => {
+    const val = e.target.value === '' ? '' : Number(e.target.value);
+    const min = localFilters.priceRange?.[0] || 0;
+    setLocalFilters({ ...localFilters, priceRange: [min, val] });
+  };
+
   const updateFilter = (key, value) => {
     setLocalFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -133,7 +142,7 @@ export default function FilterSidebar({
     if (typeof document !== 'undefined' && document.activeElement) {
       document.activeElement.blur();
     }
-  };;
+  };
 
   const handleCategoryClick = (key) => {
     // Single select: Replace entire array. Reset subcats and types.
@@ -255,18 +264,18 @@ export default function FilterSidebar({
   if (loading) return <Box>Loading filters...</Box>;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', px: '15px' }}>
       {/* Filters Area */}
       <Box sx={{ pb: '300px' }}>
         {/* Price Filter */}
-        <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ mb: 3, boxSizing: 'border-box', p: '5px' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography gutterBottom variant="subtitle2" fontWeight="bold">
               {t('price')}
             </Typography>
             <Button
               size="small"
-              onClick={() => handlePriceChange(null, [0, 1000])}
+              onClick={() => handlePriceChange(null, [0, ''])}
               sx={{
                 color: 'var(--active-color)',
                 textTransform: 'none',
@@ -278,31 +287,41 @@ export default function FilterSidebar({
               {t('reset')}
             </Button>
           </Box>
-          <Box sx={{ px: 1 }}>
-            <Slider
-              value={localFilters.priceRange || [0, 1000]}
-              onChange={handlePriceChange}
-              valueLabelDisplay="auto"
-              min={0}
-              max={1000}
-              disableSwap
-              sx={{
-                color: 'var(--active-color)',
-                '& .MuiSlider-thumb': {
-                  '&:hover, &.Mui-focusVisible': {
-                    boxShadow: '0px 0px 0px 8px rgba(244, 67, 54, 0.16)', // active color alpha
-                  },
-                },
+          <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+            <TextField
+              label={t('min')}
+              type="number"
+              size="small"
+              value={localFilters.priceRange?.[0] || ''}
+              onChange={handleMinPriceChange}
+              onWheel={(e) => e.target.blur()}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">֏</InputAdornment>,
               }}
+              sx={{
+                '& input[type=number]': { MozAppearance: 'textfield' },
+                '& input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 },
+                '& input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+              }}
+              fullWidth
             />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                {t('min')}: ${localFilters.priceRange?.[0]}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('max')}: ${localFilters.priceRange?.[1]}
-              </Typography>
-            </Box>
+            <TextField
+              label={t('max')}
+              type="number"
+              size="small"
+              value={localFilters.priceRange?.[1] || ''}
+              onChange={handleMaxPriceChange}
+              onWheel={(e) => e.target.blur()}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">֏</InputAdornment>,
+              }}
+              sx={{
+                '& input[type=number]': { MozAppearance: 'textfield' },
+                '& input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 },
+                '& input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+              }}
+              fullWidth
+            />
           </Box>
         </Box>
 
@@ -314,16 +333,26 @@ export default function FilterSidebar({
             <IOSSwitch
               checked={localFilters.discounted || false}
               onChange={() => handleToggleChange('discounted')}
+              checkedColor="#4CAF50"
             />
           }
-          label={<Typography variant="body2">{t('discounted')}</Typography>}
+          label={
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold">
+                {t('discounted')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('discounted_desc')}
+              </Typography>
+            </Box>
+          }
           sx={{
             mb: 2,
             display: 'flex',
             width: '100%',
-            justifyContent: 'space-between',
             ml: 0,
-            flexDirection: 'row-reverse',
+            alignItems: 'flex-start',
+            gap: 1,
           }}
         />
 
@@ -332,6 +361,7 @@ export default function FilterSidebar({
         {/* Categories / Subcategories Accordion */}
         <Accordion defaultExpanded elevation={0} disableGutters sx={{ '&:before': { display: 'none' } }}>
           <CustomAccordionSummary
+            sx={{ p: 0 }}
             expandIcon={
               <Box
                 sx={{
@@ -343,7 +373,7 @@ export default function FilterSidebar({
                 }}
               >
                 <AddIcon sx={{ display: 'block', '.Mui-expanded &': { display: 'none' } }} />
-                <RemoveIcon sx={{ display: 'none', '.Mui-expanded &': { display: 'block' } }} />
+                <RemoveIcon sx={{ p: 0, display: 'none', '.Mui-expanded &': { display: 'block' } }} />
               </Box>
             }
           >
@@ -363,7 +393,7 @@ export default function FilterSidebar({
                   <FormControlLabel
                     key={key}
                     control={
-                      <Checkbox
+                      <Radio
                         checked={localFilters.subcategories?.includes(key) || false}
                         onChange={() => handleSubCategoryClick(key)}
                         size="small"
@@ -384,10 +414,11 @@ export default function FilterSidebar({
                 ))}
                 <Button
                   size="small"
+                  // color="success"
                   onClick={() =>
                     setLocalFilters({ ...localFilters, categories: [], subcategories: [], types: [] })
                   }
-                  sx={{ mt: 1, textTransform: 'none', color: 'var(--active-color)' }}
+                  sx={{ mt: 1, textTransform: 'none', p: 0 }}
                 >
                   {t('back_to_categories')}
                 </Button>
@@ -398,7 +429,7 @@ export default function FilterSidebar({
                 <FormControlLabel
                   key={key}
                   control={
-                    <Checkbox
+                    <Radio
                       checked={localFilters.categories?.includes(key) || false}
                       onChange={() => handleCategoryClick(key)}
                       size="small"
@@ -428,6 +459,7 @@ export default function FilterSidebar({
           <>
             <Accordion defaultExpanded elevation={0} disableGutters sx={{ '&:before': { display: 'none' } }}>
               <CustomAccordionSummary
+                sx={{ p: 0 }}
                 expandIcon={
                   <Box
                     sx={{
@@ -630,13 +662,23 @@ export default function FilterSidebar({
               checkedColor="#2196F3"
             />
           }
-          label={<Typography variant="body2">{t('original_brand')}</Typography>}
+          label={
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold">
+                {t('original_brand')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('original_brand_desc')}
+              </Typography>
+            </Box>
+          }
           sx={{
-            mb: 1,
+            mb: 2, // Changed from mb: 1 to match spacing
             display: 'flex',
-            justifyContent: 'space-between',
+            width: '100%',
             ml: 0,
-            flexDirection: 'row-reverse',
+            alignItems: 'flex-start',
+            gap: 1,
           }}
         />
         <FormControlLabel
@@ -647,32 +689,46 @@ export default function FilterSidebar({
               checkedColor="#4CAF50"
             />
           }
-          label={<Typography variant="body2">{t('only_stock')}</Typography>}
+          label={
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold">
+                {t('only_stock')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('only_stock_desc')}
+              </Typography>
+            </Box>
+          }
           sx={{
             mb: 2,
             display: 'flex',
-            justifyContent: 'space-between',
+            width: '100%',
             ml: 0,
-            flexDirection: 'row-reverse',
+            alignItems: 'flex-start',
+            gap: 1,
           }}
         />
       </Box>
 
-      {/* Sticky Apply Button */}
-      <Box sx={{ position: 'sticky', bottom: 0, p: '10px' }}>
-        <Button
-          fullWidth
-          variant="contained"
-          color="primary"
-          onClick={() => onApplyFilters(localFilters)}
-          sx={{
-            zIndex: 10,
-            borderRadius: '15px',
-          }}
-        >
-          {t('apply_filters')}
-        </Button>
-      </Box>
+      {/* Sticky Apply Button - Hide on mobile */}
+      {!isMobile && (
+        <Box sx={{ position: 'sticky', bottom: '10px', boxSizing: 'border-box' }}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            onClick={() => onApplyFilters(localFilters)}
+            sx={{
+              zIndex: 10,
+              borderRadius: '15px',
+            }}
+          >
+            {t('apply_filters')}
+          </Button>
+        </Box>
+      )}
     </Box>
   );
-}
+});
+
+export default FilterSidebar;

@@ -27,7 +27,7 @@ export default async function ShopPage({ searchParams }) {
   };
 
   // Fetch data
-  console.log(filters);
+
   const products = await getCachedProducts(filters);
 
   return <ShopClient initialProducts={products} searchParams={params} />;

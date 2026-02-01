@@ -61,6 +61,7 @@ const MobileCategoryItem = ({
   tCommon,
   setRef,
 }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const currentCat = searchParams.get('category');
   const currentSub = searchParams.get('subcategory');
@@ -73,9 +74,14 @@ const MobileCategoryItem = ({
     <div ref={(el) => setRef(catKey, el)}>
       <ListItemButton
         sx={{ pl: 4, borderBottom: '1px solid', borderColor: 'divider' }}
-        onClick={() => (hasSub ? onToggle(catKey) : onLinkClick())}
-        component={!hasSub ? Link : 'div'} // Only Link if no subcategories (leaf)
-        href={!hasSub ? `/shop?category=${catKey}` : undefined}
+        onClick={() => {
+          if (hasSub) {
+            onToggle(catKey);
+          } else {
+            router.push(`/shop?category=${catKey}`);
+            onLinkClick();
+          }
+        }}
       >
         <ListItemText
           primary={tCats.has(catKey) ? tCats(catKey) : category.label}
@@ -94,9 +100,10 @@ const MobileCategoryItem = ({
             {/* "All Items" Link for Category */}
             <ListItemButton
               sx={{ pl: 6 }}
-              component={Link}
-              href={`/shop?category=${catKey}`}
-              onClick={onLinkClick}
+              onClick={() => {
+                router.push(`/shop?category=${catKey}`);
+                onLinkClick();
+              }}
             >
               <ListItemText
                 primary={tCommon('allItems') || 'All Items'}
@@ -116,10 +123,12 @@ const MobileCategoryItem = ({
               return (
                 <Box key={subKey} sx={{ pl: 6, pr: 2, py: 1 }}>
                   {/* Subcategory Title is now clickable */}
-                  <Link
-                    href={`/shop?category=${catKey}&subcategory=${subKey}`}
-                    onClick={onLinkClick}
-                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  <Box
+                    onClick={() => {
+                      router.push(`/shop?category=${catKey}&subcategory=${subKey}`);
+                      onLinkClick();
+                    }}
+                    sx={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                   >
                     <Typography
                       variant="subtitle2"
@@ -132,7 +141,7 @@ const MobileCategoryItem = ({
                     >
                       {tCats.has(subKey) ? tCats(subKey) : subCat.label}
                     </Typography>
-                  </Link>
+                  </Box>
 
                   {subCat.types &&
                     subCat.types.map((type) => {
@@ -142,12 +151,14 @@ const MobileCategoryItem = ({
                       return (
                         <Box
                           key={type}
-                          component={Link}
-                          href={`/shop?category=${catKey}&subcategory=${subKey}&type=${encodeURIComponent(
-                            type,
-                          )}`}
-                          onClick={onLinkClick}
+                          onClick={() => {
+                            router.push(
+                              `/shop?category=${catKey}&subcategory=${subKey}&type=${encodeURIComponent(type)}`,
+                            );
+                            onLinkClick();
+                          }}
                           sx={{
+                            cursor: 'pointer',
                             display: 'block',
                             py: 1, // Increased spacing
                             color: isTypeActive ? 'var(--active-color)' : 'text.secondary',

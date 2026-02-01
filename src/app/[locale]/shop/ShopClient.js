@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from '../../../i18n/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import TuneIcon from '@mui/icons-material/Tune';
 import CloseIcon from '@mui/icons-material/Close';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 
@@ -32,6 +33,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
   const t = useTranslations('Shop');
   const tCats = useTranslations('CategoryNames');
   const router = useRouter();
+  const filterSidebarRef = useRef(null);
 
   // We need to sync with searchParams prop passed from server for initial state
   const { categories } = useCategories();
@@ -53,7 +55,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
   // State for filters derived from props/URL
   // We use local state to manage the UI controls
   const [filters, setFilters] = useState({
-    priceRange: [Number(getParam('minPrice')) || 0, Number(getParam('maxPrice')) || 1000],
+    priceRange: [Number(getParam('minPrice')) || 0, Number(getParam('maxPrice')) || ''],
     discounted: getParam('discounted') === 'true',
     categories: getAllParams('category'),
     subcategories: getAllParams('subcategory'),
@@ -68,7 +70,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
   useEffect(() => {
     // Logic to re-sync if props change deeply
     setFilters({
-      priceRange: [Number(getParam('minPrice')) || 0, Number(getParam('maxPrice')) || 1000],
+      priceRange: [Number(getParam('minPrice')) || 0, Number(getParam('maxPrice')) || ''],
       discounted: getParam('discounted') === 'true',
       categories: getAllParams('category'),
       subcategories: getAllParams('subcategory'),
@@ -98,7 +100,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
 
   const handleResetFilters = () => {
     const defaultFilters = {
-      priceRange: [0, 1000],
+      priceRange: [0, ''],
       discounted: false,
       categories: [],
       subcategories: [],
@@ -119,7 +121,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
 
     if (currentFilters.priceRange) {
       if (currentFilters.priceRange[0] > 0) params.set('minPrice', currentFilters.priceRange[0]);
-      if (currentFilters.priceRange[1] < 1000) params.set('maxPrice', currentFilters.priceRange[1]);
+      if (currentFilters.priceRange[1]) params.set('maxPrice', currentFilters.priceRange[1]);
     }
 
     if (currentFilters.discounted) params.set('discounted', 'true');
@@ -239,13 +241,15 @@ export default function ShopClient({ initialProducts, searchParams }) {
     <Container maxWidth="xl" sx={{ py: 4, position: 'relative' }}>
       {/* Header & Breadcrumbs */}
       <Box sx={{ mb: 4 }}>
-        <Breadcrumbs
-          separator={<NavigateNextIcon fontSize="small" />}
-          aria-label="breadcrumb"
-          sx={{ mb: 2, '& .MuiTypography-root': { fontSize: '0.875rem' } }}
-        >
-          {breadcrumbs}
-        </Breadcrumbs>
+        {hasParams && (
+          <Breadcrumbs
+            separator={<NavigateNextIcon fontSize="small" />}
+            aria-label="breadcrumb"
+            sx={{ mb: '5px', '& .MuiTypography-root': { fontSize: '0.775rem' } }}
+          >
+            {breadcrumbs}
+          </Breadcrumbs>
+        )}
 
         <Box
           sx={{
@@ -256,12 +260,21 @@ export default function ShopClient({ initialProducts, searchParams }) {
             gap: 2,
           }}
         >
-          <Typography variant="h5" component="h1" fontWeight="bold">
+          <Typography variant="h6" component="h1" fontWeight="bold">
             {activeCategory ? categoryLabel : t('title')}
           </Typography>
 
           {/* Desktop Sort By */}
-          <FormControl size="small" sx={{ minWidth: 150, display: { xs: 'none', md: 'inline-flex' } }}>
+          <FormControl
+            size="small"
+            sx={{
+              width: '150px',
+              maxWidth: '50%',
+              minWidth: 0,
+              display: { xs: 'none', md: 'inline-flex' },
+              '& .MuiOutlinedInput-root': { borderRadius: 12, height: 32 },
+            }}
+          >
             <InputLabel>{t('sort_by')}</InputLabel>
             <Select value={sortBy} label={t('sort_by')} onChange={handleSortChange}>
               <MenuItem value="default">{t('sort.default')}</MenuItem>
@@ -274,18 +287,26 @@ export default function ShopClient({ initialProducts, searchParams }) {
         </Box>
 
         {/* Mobile Filter & Sort Row */}
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, gap: 2, mt: 2 }}>
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, justifyContent: 'space-between', gap: 1 }}>
           <Button
-            fullWidth
             size="small"
-            variant="outlined"
-            startIcon={<FilterListIcon />}
+            // variant="outlined"
+            startIcon={<TuneIcon />}
             onClick={handleDrawerToggle}
-            sx={{ flex: 1 }}
+            sx={{ fontSize: '16px' }}
           >
             {t('filter')}
           </Button>
-          <FormControl size="small" sx={{ flex: 1.6 }}>
+          <FormControl
+            size="small"
+            sx={{
+              width: '150px',
+              maxWidth: '50%',
+              minWidth: 0,
+              flex: 'none',
+              '& .MuiOutlinedInput-root': { borderRadius: 12, height: 30 },
+            }}
+          >
             <InputLabel>{t('sort_by')}</InputLabel>
             <Select value={sortBy} label={t('sort_by')} onChange={handleSortChange}>
               <MenuItem value="default">{t('sort.default')}</MenuItem>
@@ -298,7 +319,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
         </Box>
 
         {hasParams && (
-          <Button size="small" color="error" onClick={handleResetFilters} sx={{ mt: 1 }}>
+          <Button size="small" color="error" onClick={handleResetFilters}>
             {t('reset_filters')}
           </Button>
         )}
@@ -341,24 +362,35 @@ export default function ShopClient({ initialProducts, searchParams }) {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              p: 1,
+              p: '5px 10px',
               position: 'sticky',
               top: 0,
               bgcolor: 'background.paper',
-              zIndex: 1,
+              zIndex: 100,
               borderBottom: 1,
               borderColor: 'divider',
             }}
           >
-            <Typography variant="h6" fontWeight="bold" sx={{ ml: 2 }}>
-              {t('filter')}
-            </Typography>
+            {/* Replaced 'Filter' title with 'Apply' button functionality */}
             <IconButton onClick={handleDrawerToggle}>
               <CloseIcon />
             </IconButton>
+            <Button
+              sx={{ fontWeight: 'bold' }}
+              variant="text"
+              onClick={() => {
+                if (filterSidebarRef.current) {
+                  filterSidebarRef.current.submit();
+                  // We close mobile menu inside handleApplyFilters too, but good to be safe
+                }
+              }}
+            >
+              {t('apply_filters')}
+            </Button>
           </Box>
           <Box sx={{ height: 'calc(100% - 60px)' }}>
             <FilterSidebar
+              ref={filterSidebarRef}
               currentFilters={filters}
               showDetailedFilters={true}
               onApplyFilters={(f) => {

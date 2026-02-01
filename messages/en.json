@@ -139,7 +139,7 @@
   },
   "Shop": {
     "title": "Shop",
-    "filter": "Filter",
+    "filter": "Filters",
     "sort_by": "Sort by",
     "sort": {
       "default": "Default",
@@ -154,6 +154,7 @@
     "min": "Min",
     "max": "Max",
     "discounted": "Discounted Products",
+    "discounted_desc": "Show only discounted products",
     "categories": "Categories",
     "back_to_categories": "Back to Categories",
     "type": "Type",
@@ -164,7 +165,9 @@
     "notes": "Notes",
     "select_notes": "Select notes",
     "original_brand": "Original Brand",
+    "original_brand_desc": "Show only original brand products",
     "only_stock": "Only in Stock",
+    "only_stock_desc": "Show only products currently in stock",
     "apply_filters": "Apply Filters"
   }
 }

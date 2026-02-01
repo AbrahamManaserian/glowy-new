@@ -139,7 +139,7 @@
   },
   "Shop": {
     "title": "Магазин",
-    "filter": "Фильтр",
+    "filter": "Фильтры",
     "sort_by": "Сортировать",
     "sort": {
       "default": "По умолчанию",
@@ -154,6 +154,7 @@
     "min": "Мин",
     "max": "Макс",
     "discounted": "Со скидкой",
+    "discounted_desc": "Показать только товары со скидкой",
     "categories": "Категории",
     "back_to_categories": "Назад к категориям",
     "type": "Тип",
@@ -164,7 +165,9 @@
     "notes": "Ноты",
     "select_notes": "Выберите ноты",
     "original_brand": "Оригинал",
+    "original_brand_desc": "Только оригинальная продукция",
     "only_stock": "В наличии",
+    "only_stock_desc": "Показать только товары в наличии",
     "apply_filters": "Применить"
   }
 }

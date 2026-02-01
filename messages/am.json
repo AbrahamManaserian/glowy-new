@@ -139,7 +139,7 @@
   },
   "Shop": {
     "title": "Խանութ",
-    "filter": "Ֆիլտրել",
+    "filter": "Ֆիլտրեր",
     "sort_by": "Դասավորել",
     "sort": {
       "default": "Լռելյայն",
@@ -148,12 +148,13 @@
       "newest": "Նորերը",
       "oldest": "Հիները"
     },
-    "reset_filters": "Ջնջել ֆիլտրերը",
+    "reset_filters": "Մաքրել ֆիլտրերը",
     "price": "Գին",
-    "reset": "Ջնջել",
+    "reset": "Մաքրել",
     "min": "Մին",
     "max": "Մաքս",
     "discounted": "Զեղչված",
+    "discounted_desc": "Ցուցադրել միայն զեղչված ապրանքները",
     "categories": "Կատեգորիաներ",
     "back_to_categories": "Ետ դեպի կատեգորիաներ",
     "type": "Տեսակ",
@@ -164,7 +165,9 @@
     "notes": "Նոտաներ",
     "select_notes": "Ընտրեք նոտաներ",
     "original_brand": "Օրիգինալ",
+    "original_brand_desc": "Ցուցադրել միայն օրիգինալ ապրանքները",
     "only_stock": "Միայն առկա",
+    "only_stock_desc": "Ցուցադրել միայն առկա տեսականին",
     "apply_filters": "Կիրառել"
   }
 }
