@@ -42,6 +42,16 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCategories } from '../context/CategoriesContext';
 import { useUI } from '../context/UIContext';
+import {
+  AccessoriesIcon,
+  BathBodyIcon,
+  CollectionIcon,
+  FragranceIcon,
+  HairIcon,
+  MakeupIcon,
+  NailIcon,
+  SkincareIcon,
+} from './icons';
 
 
 const navItems = ['shop', 'sale', 'gift cards', 'about'];
@@ -70,10 +80,23 @@ const MobileCategoryItem = ({
   const hasSub = category.subcategories && Object.keys(category.subcategories).length > 0;
   const isCatActive = currentCat === catKey;
 
+  const iconMap = {
+    fragrance: FragranceIcon,
+    makeup: MakeupIcon,
+    skincare: SkincareIcon,
+    bathBody: BathBodyIcon,
+    hair: HairIcon,
+    nail: NailIcon,
+    accessories: AccessoriesIcon,
+    collection: CollectionIcon,
+  };
+
+  const IconComponent = iconMap[catKey];
+
   return (
     <div ref={(el) => setRef(catKey, el)}>
       <ListItemButton
-        sx={{ pl: 4, borderBottom: '1px solid', borderColor: 'divider' }}
+        sx={{ pl: 4, borderColor: 'divider' }}
         onClick={() => {
           if (hasSub) {
             onToggle(catKey);
@@ -83,6 +106,9 @@ const MobileCategoryItem = ({
           }
         }}
       >
+        {IconComponent && (
+          <IconComponent sx={{ mr: 1, color: isCatActive ? 'var(--active-color)' : 'inherit' }} />
+        )}
         <ListItemText
           primary={tCats.has(catKey) ? tCats(catKey) : category.label}
           primaryTypographyProps={{
@@ -293,40 +319,12 @@ function Navbar({ locale }) {
   const drawer = (
     <Box sx={{ width: '100%', maxWidth: '100%', bgcolor: 'background.paper' }}>
       <List component="nav" aria-labelledby="nested-list-subheader">
-        {/* All Categories Section (Desktop Mega Menu equivalent) */}
-        <ListItemButton
-          onClick={() => setCatsOpen(!catsOpen)}
-          sx={{
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          <ListItemText
-            primary={tCategories('title') || 'All Categories'}
-            primaryTypographyProps={{ fontWeight: 'bold' }}
-          />
-          {catsOpen ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-        <Collapse in={catsOpen} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {/* Dynamically Loaded Categories */}
-            {Object.keys(categories).map((catKey) => (
-              <MobileCategoryItem
-                key={catKey}
-                catKey={catKey}
-                category={categories[catKey]}
-                isExpanded={mobileExpandedCat === catKey}
-                onToggle={handleMobileCatToggle}
-                onLinkClick={handleLinkClick}
-                tCats={tCats}
-                tCommon={tCommon}
-                setRef={(key, el) => (categoryRefs.current[key] = el)}
-              />
-            ))}
-          </List>
-        </Collapse>
+        <ListItemText
+          primary={tCommon('general') || 'General'}
+          primaryTypographyProps={{ fontWeight: 'bold' }}
+          sx={{ mx: 2, pt: '10px', borderColor: 'divider' }}
+        />
 
-        {/* Standard Nav Items */}
         {navItems.map((item) => {
           const path = getPath(item);
           const isActive = pathname === path;
@@ -336,19 +334,76 @@ function Navbar({ locale }) {
               component={Link}
               href={path}
               onClick={handleLinkClick}
-              sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+              // sx={{ borderBottom: '1px solid', borderColor: 'divider', mx: 2 }}
+              sx={{ mx: 2 }}
             >
               <ListItemText
                 primary={t(item)}
                 primaryTypographyProps={{
                   color: isActive ? 'var(--active-color)' : 'inherit',
                   textTransform: 'capitalize',
-                  fontWeight: 500,
+                  // fontWeight: 500,
                 }}
               />
             </ListItemButton>
           );
         })}
+
+        {/* All Categories Section (Desktop Mega Menu equivalent) */}
+        <ListItemText
+          primary={tCategories('title') || 'All Categories'}
+          primaryTypographyProps={{ fontWeight: 'bold' }}
+          sx={{ mx: 2, pt: '15px', borderTop: '1px solid', borderColor: 'divider' }}
+        />
+        {/* </ListItemButton> */}
+        <List component="div" disablePadding>
+          {/* Dynamically Loaded Categories */}
+          {Object.keys(categories).map((catKey) => (
+            <MobileCategoryItem
+              key={catKey}
+              catKey={catKey}
+              category={categories[catKey]}
+              isExpanded={mobileExpandedCat === catKey}
+              onToggle={handleMobileCatToggle}
+              onLinkClick={handleLinkClick}
+              tCats={tCats}
+              tCommon={tCommon}
+              setRef={(key, el) => (categoryRefs.current[key] = el)}
+            />
+          ))}
+        </List>
+        {/* </Collapse> */}
+
+        {/* Standard Nav Items */}
+
+        {/* <ListItemText
+          primary={tCommon('general') || 'General'}
+          primaryTypographyProps={{ fontWeight: 'bold' }}
+          sx={{ mx: 2, pt: '15px', borderTop: '1px solid', borderColor: 'divider' }}
+        />
+
+        {navItems.map((item) => {
+          const path = getPath(item);
+          const isActive = pathname === path;
+          return (
+            <ListItemButton
+              key={item}
+              component={Link}
+              href={path}
+              onClick={handleLinkClick}
+              sx={{ borderBottom: '1px solid', borderColor: 'divider', mx: 2 }}
+            >
+              <ListItemText
+                primary={t(item)}
+                primaryTypographyProps={{
+                  color: isActive ? 'var(--active-color)' : 'inherit',
+                  textTransform: 'capitalize',
+                  // fontWeight: 500,
+                }}
+              />
+            </ListItemButton>
+          );
+        })} */}
       </List>
     </Box>
   );

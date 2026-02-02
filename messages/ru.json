@@ -109,7 +109,8 @@
     "Women": "Женский"
   },
   "Common": {
-    "allItems": "Все товары"
+    "allItems": "Все товары",
+    "general": "Общее"
   },
   "HomePage": {
     "title": "Добро пожаловать"

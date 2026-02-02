@@ -109,7 +109,8 @@
     "Women": "Women"
   },
   "Common": {
-    "allItems": "All Items"
+    "allItems": "All Items",
+    "general": "General"
   },
   "HomePage": {
     "title": "Welcome"
