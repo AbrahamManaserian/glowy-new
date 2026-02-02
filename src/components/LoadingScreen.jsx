@@ -3,6 +3,7 @@
 import React from 'react';
 import { Box, CircularProgress } from '@mui/material';
 
+
 export default function LoadingScreen({ transparent = false }) {
   return (
     <Box
@@ -17,7 +18,7 @@ export default function LoadingScreen({ transparent = false }) {
         left: 0,
         zIndex: 9999,
         bgcolor: transparent ? 'rgba(255, 255, 255, 0.5)' : 'background.default',
-        backdropFilter: transparent ? 'blur(2px)' : 'none',
+        // backdropFilter: transparent ? 'blur(2px)' : 'none',
       }}
     >
       <CircularProgress />

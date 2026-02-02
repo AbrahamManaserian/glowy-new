@@ -168,6 +168,7 @@
     "original_brand_desc": "Show only original brand products",
     "only_stock": "Only in Stock",
     "only_stock_desc": "Show only products currently in stock",
-    "apply_filters": "Apply Filters"
+    "apply_filters": "Apply Filters",
+    "search_placeholder": "Search..."
   }
 }

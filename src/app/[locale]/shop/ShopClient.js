@@ -245,7 +245,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
           <Breadcrumbs
             separator={<NavigateNextIcon fontSize="small" />}
             aria-label="breadcrumb"
-            sx={{ mb: '5px', '& .MuiTypography-root': { fontSize: '0.775rem' } }}
+            sx={{ mb: '1px', '& .MuiTypography-root': { fontSize: '0.775rem' } }}
           >
             {breadcrumbs}
           </Breadcrumbs>
@@ -287,13 +287,13 @@ export default function ShopClient({ initialProducts, searchParams }) {
         </Box>
 
         {/* Mobile Filter & Sort Row */}
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, justifyContent: 'space-between', gap: 1 }}>
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, justifyContent: 'space-between', gap: 1, my: '5px' }}>
           <Button
             size="small"
             // variant="outlined"
             startIcon={<TuneIcon />}
             onClick={handleDrawerToggle}
-            sx={{ fontSize: '16px' }}
+            sx={{ fontSize: '16px', p: 0 }}
           >
             {t('filter')}
           </Button>
@@ -319,7 +319,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
         </Box>
 
         {hasParams && (
-          <Button size="small" color="error" onClick={handleResetFilters}>
+          <Button sx={{ p: 0 }} size="small" color="error" onClick={handleResetFilters}>
             {t('reset_filters')}
           </Button>
         )}

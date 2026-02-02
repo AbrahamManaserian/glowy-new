@@ -19,10 +19,18 @@ import {
   useMediaQuery,
   Radio,
   InputAdornment,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import { styled } from '@mui/material/styles';
 import { useTranslations } from 'next-intl';
 import { useCategories } from '../../context/CategoriesContext';
@@ -85,7 +93,137 @@ const CustomAccordionSummary = styled(AccordionSummary)(({ theme }) => ({
   },
 }));
 
+const MobileFilterDrawer = ({
+  open,
+  onClose,
+  title,
+  options = [],
+  selectedValues = [],
+  onSelectionChange,
+  searchPlaceholder,
+  noResultsText,
+  applyText,
+}) => {
+  const [search, setSearch] = useState('');
 
+  // Reset search when opening
+  useEffect(() => {
+    if (open) setSearch('');
+  }, [open]);
+
+  const filteredOptions = options.filter((opt) =>
+    String(opt).toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
+  return (
+    <Drawer
+      anchor="bottom"
+      open={open}
+      onClose={onClose}
+      sx={{
+        zIndex: (theme) => theme.zIndex.modal + 1,
+        '& .MuiDrawer-paper': {
+          height: 'calc(100% - 16px)',
+          m: 1,
+          borderRadius: 4,
+          overflow: 'hidden',
+          // Ensure it doesn't touch edges fully
+          width: 'calc(100% - 16px)',
+          maxWidth: '100%',
+        },
+      }}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" fontWeight="bold">
+            {title}
+          </Typography>
+          <IconButton onClick={onClose} edge="end">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder={searchPlaceholder || 'Search...'}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+            sx: { borderRadius: 3, height: 45 },
+          }}
+          sx={{ mb: 2 }}
+        />
+
+        <List sx={{ flexGrow: 1, overflowY: 'auto', mb: 2 }}>
+          {filteredOptions.map((opt) => {
+            const checked = selectedValues.includes(opt);
+            return (
+              <ListItem
+                key={opt}
+                disablePadding
+                secondaryAction={
+                  <Checkbox
+                    edge="end"
+                    checked={checked}
+                    onChange={() => {
+                      const newValues = checked
+                        ? selectedValues.filter((v) => v !== opt)
+                        : [...selectedValues, opt];
+                      onSelectionChange(newValues);
+                    }}
+                    sx={{
+                      color: 'text.secondary',
+                      '&.Mui-checked': { color: 'var(--active-color)' },
+                    }}
+                  />
+                }
+              >
+                <ListItemButton
+                  onClick={() => {
+                    const newValues = checked
+                      ? selectedValues.filter((v) => v !== opt)
+                      : [...selectedValues, opt];
+                    onSelectionChange(newValues);
+                  }}
+                >
+                  <ListItemText primary={opt} />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+          {filteredOptions.length === 0 && (
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 3 }}>
+              {noResultsText || 'No results found'}
+            </Typography>
+          )}
+        </List>
+
+        <Button
+          variant="contained"
+          fullWidth
+          size="small"
+          sx={{
+            py: 1.5,
+            bgcolor: 'var(--active-color)',
+            color: '#fff',
+            fontWeight: 'bold',
+            borderRadius: 3,
+            '&:hover': { bgcolor: 'var(--active-color)', opacity: 0.9 },
+          }}
+          onClick={onClose}
+        >
+          {applyText || 'Apply'}
+        </Button>
+      </Box>
+    </Drawer>
+  );
+};;
 
 const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
   const { categories, loading } = useCategories();
@@ -219,6 +357,11 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
   const [brandOptions, setBrandOptions] = useState([]);
   const [sizeOptions, setSizeOptions] = useState([]);
   const [perfumeNotes, setPerfumeNotes] = useState([]);
+
+  // Mobile Drawer States
+  const [brandsDrawerOpen, setBrandsDrawerOpen] = useState(false);
+  const [sizesDrawerOpen, setSizesDrawerOpen] = useState(false);
+  const [notesDrawerOpen, setNotesDrawerOpen] = useState(false);
 
   const brandRef = useRef(null);
   const sizeRef = useRef(null);
@@ -514,104 +657,82 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
           <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
             {t('brands')}
           </Typography>
-          <Autocomplete
-            multiple
-            onOpen={() => handleScrollToElement(brandRef)}
-            options={brandOptions}
-            value={localFilters.brands || []}
-            onChange={(e, val) => handleAutocompleteChange('brands', val)}
-            renderInput={(params) => (
+          {isMobile ? (
+            <>
               <TextField
-                {...params}
-                inputProps={{
-                  ...params.inputProps,
-                  inputMode: isMobile ? 'none' : 'text',
-                }}
                 variant="outlined"
                 size="small"
-                placeholder={t('select_brands')}
+                fullWidth
+                placeholder={localFilters.brands?.length > 0 ? '' : t('select_brands')}
+                onClick={() => setBrandsDrawerOpen(true)}
+                InputProps={{
+                  readOnly: true,
+                  startAdornment: (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 0.5,
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {(localFilters.brands || []).slice(0, 3).map((brand) => (
+                        <Chip
+                          key={brand}
+                          label={brand}
+                          size="small"
+                          onDelete={(e) => {
+                            e.stopPropagation();
+                            const newBrands = localFilters.brands.filter((b) => b !== brand);
+                            updateFilter('brands', newBrands);
+                          }}
+                          sx={{
+                            bgcolor: 'rgba(244, 67, 54, 0.08)',
+                            color: 'var(--active-color)',
+                            '& .MuiChip-deleteIcon': { color: 'var(--active-color)' },
+                          }}
+                        />
+                      ))}
+                      {(localFilters.brands?.length || 0) > 3 && (
+                        <Chip label={`+${localFilters.brands.length - 3}`} size="small" />
+                      )}
+                    </Box>
+                  ),
+                }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'var(--active-color)',
-                    },
+                    cursor: 'pointer',
+                    borderRadius: 3,
+                    minHeight: 40,
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    paddingTop: localFilters.brands?.length > 0 ? 0.5 : 0,
+                    paddingBottom: localFilters.brands?.length > 0 ? 0.5 : 0,
+                    '& fieldset': { borderColor: 'rgba(0,0,0,0.23)' },
+                    '&:hover fieldset': { borderColor: 'text.primary' },
                   },
                 }}
               />
-            )}
-            ChipProps={{
-              sx: {
-                bgcolor: 'rgba(244, 67, 54, 0.08)',
-                color: 'var(--active-color)',
-                '& .MuiChip-deleteIcon': {
-                  color: 'var(--active-color)',
-                  '&:hover': {
-                    color: 'var(--active-color)',
-                    opacity: 0.7,
-                  },
-                },
-              },
-            }}
-          />
-        </Box>
 
-        {/* Size Autocomplete */}
-        <Box sx={{ mb: 3 }} ref={sizeRef}>
-          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-            {t('size')}
-          </Typography>
-          <Autocomplete
-            multiple
-            onOpen={() => handleScrollToElement(sizeRef)}
-            options={sizeOptions}
-            value={localFilters.sizes || []}
-            onChange={(e, val) => handleAutocompleteChange('sizes', val)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                inputProps={{
-                  ...params.inputProps,
-                  inputMode: isMobile ? 'none' : 'text',
-                }}
-                variant="outlined"
-                size="small"
-                placeholder={t('select_size')}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'var(--active-color)',
-                    },
-                  },
-                }}
+              <MobileFilterDrawer
+                open={brandsDrawerOpen}
+                onClose={() => setBrandsDrawerOpen(false)}
+                title={t('brands')}
+                options={brandOptions}
+                selectedValues={localFilters.brands || []}
+                onSelectionChange={(newVal) => updateFilter('brands', newVal)}
+                searchPlaceholder={t('search_placeholder')}
+                applyText={t('apply_filters')}
               />
-            )}
-            ChipProps={{
-              sx: {
-                bgcolor: 'rgba(244, 67, 54, 0.08)',
-                color: 'var(--active-color)',
-                '& .MuiChip-deleteIcon': {
-                  color: 'var(--active-color)',
-                  '&:hover': {
-                    color: 'var(--active-color)',
-                    opacity: 0.7,
-                  },
-                },
-              },
-            }}
-          />
-        </Box>
-
-        {activeCategoryKey === 'fragrance' && perfumeNotes.length > 0 && (
-          <Box sx={{ mb: 3 }} ref={notesRef}>
-            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-              {t('notes')}
-            </Typography>
+            </>
+          ) : (
             <Autocomplete
               multiple
-              onOpen={() => handleScrollToElement(notesRef)}
-              options={perfumeNotes}
-              value={localFilters.notes || []}
-              onChange={(e, val) => handleAutocompleteChange('notes', val)}
+              onOpen={() => handleScrollToElement(brandRef)}
+              options={brandOptions}
+              value={localFilters.brands || []}
+              onChange={(e, val) => handleAutocompleteChange('brands', val)}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -621,7 +742,7 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
                   }}
                   variant="outlined"
                   size="small"
-                  placeholder={t('select_notes')}
+                  placeholder={t('select_brands')}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '&.Mui-focused fieldset': {
@@ -637,17 +758,252 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
                   color: 'var(--active-color)',
                   '& .MuiChip-deleteIcon': {
                     color: 'var(--active-color)',
-                    '&:hover': { color: 'var(--active-color)', opacity: 0.7 },
+                    '&:hover': {
+                      color: 'var(--active-color)',
+                      opacity: 0.7,
+                    },
                   },
                 },
               }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...tagProps } = getTagProps({ index });
-                  return <Chip key={key} size="small" label={option} {...tagProps} />;
-                })
-              }
             />
+          )}
+        </Box>
+
+        {/* Size Autocomplete */}
+        <Box sx={{ mb: 3 }} ref={sizeRef}>
+          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+            {t('size')}
+          </Typography>
+          {isMobile ? (
+            <>
+              <TextField
+                variant="outlined"
+                size="small"
+                fullWidth
+                placeholder={localFilters.sizes?.length > 0 ? '' : t('select_size')}
+                onClick={() => setSizesDrawerOpen(true)}
+                InputProps={{
+                  readOnly: true,
+                  startAdornment: (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 0.5,
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {(localFilters.sizes || []).slice(0, 3).map((size) => (
+                        <Chip
+                          key={size}
+                          label={size}
+                          size="small"
+                          onDelete={(e) => {
+                            e.stopPropagation();
+                            const newSizes = localFilters.sizes.filter((s) => s !== size);
+                            updateFilter('sizes', newSizes);
+                          }}
+                          sx={{
+                            bgcolor: 'rgba(244, 67, 54, 0.08)',
+                            color: 'var(--active-color)',
+                            '& .MuiChip-deleteIcon': { color: 'var(--active-color)' },
+                          }}
+                        />
+                      ))}
+                      {(localFilters.sizes?.length || 0) > 3 && (
+                        <Chip label={`+${localFilters.sizes.length - 3}`} size="small" />
+                      )}
+                    </Box>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    cursor: 'pointer',
+                    borderRadius: 3,
+                    minHeight: 40,
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    paddingTop: localFilters.sizes?.length > 0 ? 0.5 : 0,
+                    paddingBottom: localFilters.sizes?.length > 0 ? 0.5 : 0,
+                    '& fieldset': { borderColor: 'rgba(0,0,0,0.23)' },
+                    '&:hover fieldset': { borderColor: 'text.primary' },
+                  },
+                }}
+              />
+
+              <MobileFilterDrawer
+                open={sizesDrawerOpen}
+                onClose={() => setSizesDrawerOpen(false)}
+                title={t('size')}
+                options={sizeOptions}
+                selectedValues={localFilters.sizes || []}
+                onSelectionChange={(newVal) => updateFilter('sizes', newVal)}
+                searchPlaceholder={t('search_placeholder')}
+                applyText={t('apply_filters')}
+              />
+            </>
+          ) : (
+            <Autocomplete
+              multiple
+              onOpen={() => handleScrollToElement(sizeRef)}
+              options={sizeOptions}
+              value={localFilters.sizes || []}
+              onChange={(e, val) => handleAutocompleteChange('sizes', val)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  inputProps={{
+                    ...params.inputProps,
+                    inputMode: isMobile ? 'none' : 'text',
+                  }}
+                  variant="outlined"
+                  size="small"
+                  placeholder={t('select_size')}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'var(--active-color)',
+                      },
+                    },
+                  }}
+                />
+              )}
+              ChipProps={{
+                sx: {
+                  bgcolor: 'rgba(244, 67, 54, 0.08)',
+                  color: 'var(--active-color)',
+                  '& .MuiChip-deleteIcon': {
+                    color: 'var(--active-color)',
+                    '&:hover': {
+                      color: 'var(--active-color)',
+                      opacity: 0.7,
+                    },
+                  },
+                },
+              }}
+            />
+          )}
+        </Box>
+
+        {activeCategoryKey === 'fragrance' && perfumeNotes.length > 0 && (
+          <Box sx={{ mb: 3 }} ref={notesRef}>
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+              {t('notes')}
+            </Typography>
+            {isMobile ? (
+              <>
+                <TextField
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  placeholder={localFilters.notes?.length > 0 ? '' : t('select_notes') || 'Select notes'}
+                  onClick={() => setNotesDrawerOpen(true)}
+                  InputProps={{
+                    readOnly: true,
+                    startAdornment: (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: 0.5,
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {(localFilters.notes || []).slice(0, 3).map((note) => (
+                          <Chip
+                            key={note}
+                            label={note}
+                            size="small"
+                            onDelete={(e) => {
+                              e.stopPropagation();
+                              const newNotes = localFilters.notes.filter((n) => n !== note);
+                              updateFilter('notes', newNotes);
+                            }}
+                            sx={{
+                              bgcolor: 'rgba(244, 67, 54, 0.08)',
+                              color: 'var(--active-color)',
+                              '& .MuiChip-deleteIcon': { color: 'var(--active-color)' },
+                            }}
+                          />
+                        ))}
+                        {(localFilters.notes?.length || 0) > 3 && (
+                          <Chip label={`+${localFilters.notes.length - 3}`} size="small" />
+                        )}
+                      </Box>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      cursor: 'pointer',
+                      borderRadius: 3,
+                      minHeight: 40,
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      paddingTop: localFilters.notes?.length > 0 ? 0.5 : 0,
+                      paddingBottom: localFilters.notes?.length > 0 ? 0.5 : 0,
+                      '& fieldset': { borderColor: 'rgba(0,0,0,0.23)' },
+                      '&:hover fieldset': { borderColor: 'text.primary' },
+                    },
+                  }}
+                />
+
+                <MobileFilterDrawer
+                  open={notesDrawerOpen}
+                  onClose={() => setNotesDrawerOpen(false)}
+                  title={t('notes')}
+                  options={perfumeNotes}
+                  selectedValues={localFilters.notes || []}
+                  onSelectionChange={(newVal) => updateFilter('notes', newVal)}
+                  searchPlaceholder={t('search_placeholder')}
+                  applyText={t('apply_filters')}
+                />
+              </>
+            ) : (
+              <Autocomplete
+                multiple
+                onOpen={() => handleScrollToElement(notesRef)}
+                options={perfumeNotes}
+                value={localFilters.notes || []}
+                onChange={(e, val) => handleAutocompleteChange('notes', val)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    inputProps={{
+                      ...params.inputProps,
+                      inputMode: isMobile ? 'none' : 'text',
+                    }}
+                    variant="outlined"
+                    size="small"
+                    placeholder={t('select_notes')}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&.Mui-focused fieldset': {
+                          borderColor: 'var(--active-color)',
+                        },
+                      },
+                    }}
+                  />
+                )}
+                ChipProps={{
+                  sx: {
+                    bgcolor: 'rgba(244, 67, 54, 0.08)',
+                    color: 'var(--active-color)',
+                    '& .MuiChip-deleteIcon': {
+                      color: 'var(--active-color)',
+                      '&:hover': { color: 'var(--active-color)', opacity: 0.7 },
+                    },
+                  },
+                }}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const { key, ...tagProps } = getTagProps({ index });
+                    return <Chip key={key} size="small" label={option} {...tagProps} />;
+                  })
+                }
+              />
+            )}
           </Box>
         )}
 
