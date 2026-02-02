@@ -19,7 +19,7 @@
     "welcome_guest": "Բարի գալուստ, Հյուր"
   },
   "Categories": {
-    "title": "Կատեգորիաներ",
+    "title": "Բաժիններ",
     "search_placeholder": "Որոնել ապրանքներ..."
   },
   "CategoryNames": {
@@ -156,8 +156,8 @@
     "max": "Մաքս",
     "discounted": "Զեղչված",
     "discounted_desc": "Ցուցադրել միայն զեղչված ապրանքները",
-    "categories": "Կատեգորիաներ",
-    "back_to_categories": "Ետ դեպի կատեգորիաներ",
+    "categories": "Բաժիններ",
+    "back_to_categories": "Ետ դեպի բաժիններ",
     "type": "Տեսակ",
     "brands": "Բրենդներ",
     "select_brands": "Ընտրեք բրենդներ",
@@ -170,6 +170,7 @@
     "only_stock": "Միայն առկա",
     "only_stock_desc": "Ցուցադրել միայն առկա տեսականին",
     "apply_filters": "Կիրառել",
-    "search_placeholder": "Որոնում..."
+    "search_placeholder": "Որոնում...",
+    "order": "Պատվիրել"
   }
 }

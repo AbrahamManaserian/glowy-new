@@ -170,6 +170,7 @@
     "only_stock": "В наличии",
     "only_stock_desc": "Показать только товары в наличии",
     "apply_filters": "Применить",
-    "search_placeholder": "Поиск..."
+    "search_placeholder": "Поиск...",
+    "order": "Заказать"
   }
 }

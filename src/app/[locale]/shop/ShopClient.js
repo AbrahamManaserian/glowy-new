@@ -260,7 +260,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
             gap: 2,
           }}
         >
-          <Typography variant="h6" component="h1" fontWeight="bold">
+          <Typography sx={{ my: '5px' }} variant="h6" component="h1" fontWeight="bold">
             {activeCategory ? categoryLabel : t('title')}
           </Typography>
 

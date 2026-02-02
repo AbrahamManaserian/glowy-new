@@ -170,6 +170,7 @@
     "only_stock": "Only in Stock",
     "only_stock_desc": "Show only products currently in stock",
     "apply_filters": "Apply Filters",
-    "search_placeholder": "Search..."
+    "search_placeholder": "Search...",
+    "order": "Order"
   }
 }

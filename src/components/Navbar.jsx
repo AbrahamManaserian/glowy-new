@@ -7,7 +7,6 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import MenuIcon from '@mui/icons-material/Menu';
-import Container from '@mui/material/Container';
 import Button from '@mui/material/Button';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
@@ -31,6 +30,10 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import Avatar from '@mui/material/Avatar';
+import StoreOutlinedIcon from '@mui/icons-material/StoreOutlined';
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
+import CardGiftcardOutlinedIcon from '@mui/icons-material/CardGiftcardOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -217,7 +220,6 @@ function Navbar({ locale }) {
   const tCategories = useTranslations('Categories');
   const tCommon = useTranslations('Common'); // Assuming "All Items" or similar is common
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, logout } = useAuth();
   const theme = useTheme();
@@ -232,7 +234,6 @@ function Navbar({ locale }) {
   const [langOpen, setLangOpen] = useState(false);
 
   // Mobile Category State
-  const [catsOpen, setCatsOpen] = useState(true); // Open "All Categories" by default? Or closed.
   const [mobileExpandedCat, setMobileExpandedCat] = useState(null); // Track expanded categories
   const categoryRefs = React.useRef({}); // Map of category keys to DOM nodes
 
@@ -315,6 +316,13 @@ function Navbar({ locale }) {
     return `/${item}`;
   };
 
+  const generalIconMap = {
+    shop: StoreOutlinedIcon,
+    sale: LocalOfferOutlinedIcon,
+    'gift cards': CardGiftcardOutlinedIcon,
+    about: InfoOutlinedIcon,
+  };
+
   // Content for Navigation Drawer
   const drawer = (
     <Box sx={{ width: '100%', maxWidth: '100%', bgcolor: 'background.paper' }}>
@@ -328,6 +336,7 @@ function Navbar({ locale }) {
         {navItems.map((item) => {
           const path = getPath(item);
           const isActive = pathname === path;
+          const IconComponent = generalIconMap[item];
           return (
             <ListItemButton
               key={item}
@@ -335,8 +344,13 @@ function Navbar({ locale }) {
               href={path}
               onClick={handleLinkClick}
               // sx={{ borderBottom: '1px solid', borderColor: 'divider', mx: 2 }}
-              sx={{ mx: 2 }}
+              sx={{ mx: 2, py: '5px' }}
             >
+              {IconComponent && (
+                <IconComponent
+                  sx={{ mr: 1, fontSize: '20px', color: isActive ? 'var(--active-color)' : 'inherit' }}
+                />
+              )}
               <ListItemText
                 primary={t(item)}
                 primaryTypographyProps={{
@@ -372,38 +386,6 @@ function Navbar({ locale }) {
             />
           ))}
         </List>
-        {/* </Collapse> */}
-
-        {/* Standard Nav Items */}
-
-        {/* <ListItemText
-          primary={tCommon('general') || 'General'}
-          primaryTypographyProps={{ fontWeight: 'bold' }}
-          sx={{ mx: 2, pt: '15px', borderTop: '1px solid', borderColor: 'divider' }}
-        />
-
-        {navItems.map((item) => {
-          const path = getPath(item);
-          const isActive = pathname === path;
-          return (
-            <ListItemButton
-              key={item}
-              component={Link}
-              href={path}
-              onClick={handleLinkClick}
-              sx={{ borderBottom: '1px solid', borderColor: 'divider', mx: 2 }}
-            >
-              <ListItemText
-                primary={t(item)}
-                primaryTypographyProps={{
-                  color: isActive ? 'var(--active-color)' : 'inherit',
-                  textTransform: 'capitalize',
-                  // fontWeight: 500,
-                }}
-              />
-            </ListItemButton>
-          );
-        })} */}
       </List>
     </Box>
   );
