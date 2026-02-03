@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Box, Card, CardMedia, Typography, Button, Rating, IconButton, Menu, MenuItem } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useRouter } from '../../i18n/navigation';
@@ -8,61 +8,34 @@ import { useTranslations } from 'next-intl';
 import { ShoppingBasketIcon } from '../ShoppingBasketIcon';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { CustomPagination } from '../CustomPagination';
 
 // Component for individual Product Card to handle local state (selected variant)
-const ProductCard = ({ product, t, tCats }) => {
+// Wrapped in memo to prevent unnecessary re-renders when parent grid updates
+const ProductCard = memo(({ product, t, tCats }) => {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = useState(null);
+
+  // ... implementation ...
 
   // Helper to safely translate or return original
   const safeTranslate = (key, translator) => {
     if (!key) return '';
-    // If it's a simple string, try to translate.
-    // Keys like "ml", "size" are lowercase in our JSON usually, but let's try direct first then lower.
-    // However, for "Lipstick", it is PascalCase in JSON "Lipstick".
-    // For "size", it is "size".
-    // We try exact match first, then lowercase match?
-    // User data might be "Color" or "color".
-
-    // Attempt 1: Exact
-    // Note: next-intl t() returns the key if strict is false and key missing?
-    // Or we can't easily check existence without error/warning in some setups.
-    // Assuming standard behavior: returns key if missing.
-    // But to be cleaner, let's just use it. If the translation file has it, good.
-
-    // We need to handle case sensitivity.
-    // JSON keys: "size", "color", "ml" (lowercase). "Lipstick" (Pascal).
-
     const lowerKey = key.toString().toLowerCase();
-
-    // Unit/Option check (using t -> Shop)
-    // We added "size", "color" (lowercase) to JSON.
-    // If input is "Color", lowerKey is "color".
     if (translator === t) {
-      // Try lowercase for Shop keys
       return t.rich ? t(lowerKey) : t(lowerKey) === lowerKey ? key : t(lowerKey); // Rough check
     }
-
-    return translator(key); // Default behavior
+    return translator(key);
   };
-  // Simplified Logic:
-  // We will try to translate `key.toLowerCase()` for options/units.
-  // We will try to translate `key` (exact) for Categories (Types).
 
   const trOption = (key) => {
     if (!key) return '';
     const lower = key.toLowerCase();
-    // If translation returns key (meaning missing), we return original key to keep casing or just original.
-    // next-intl doesn't expose `has` easily in the hook function usually unless configured.
-    // We will just try `t(lower)`. If it returns text different from key, use it.
-    // Limitation: If translation is same as key (e.g. "Color" -> "Color"), it works.
-    // But if missing, t('foo') -> 'foo'.
     return t(lower);
   };
 
   const trType = (key) => {
     if (!key) return '';
-    // Categories are PascalCase e.g. "Lipstick". Product data might be "Lipstick".
     return tCats(key);
   };
 
@@ -73,14 +46,36 @@ const ProductCard = ({ product, t, tCats }) => {
   const [selectedVariant, setSelectedVariant] = useState(null);
 
   // 2. Derived Display Values
-  // Requirement: "Display Name must be with product type"
   const displayName = product.name;
 
-  // Image: Variant image > Root specific image (main/small) > Placeholder
-  const displayImage = selectedVariant?.image || product.mainImage || 'https://placehold.co/400';
+  // Image & Price & Discount Logic
+  // Fallback to defaults
+  const currentVariant =
+    selectedVariant ||
+    (product.variants &&
+      product.variants.find(
+        (v) => v.attributes && v.attributes[primaryOption?.name] === primaryOption?.values?.[0],
+      )) ||
+    {};
 
-  // Price: Variant price > Root price
-  const displayPrice = selectedVariant?.price || product.price;
+  const displayImage =
+    selectedVariant?.image || currentVariant?.image || product.mainImage || 'https://placehold.co/400';
+
+  // Price Logic (Fixed: Price is BASE, Discount is PERCENT)
+  const basePrice = selectedVariant?.price || currentVariant?.price || product.price || 0;
+
+  // Discount Logic utilizing 'discount' percent field
+  const discountPercent = selectedVariant?.discount || currentVariant?.discount || product.discount || 0;
+  const hasDiscount = discountPercent > 0;
+
+  // Calculate final selling price
+  // Formula: Final = Base * (1 - discount/100)
+  const finalPrice =
+    hasDiscount && basePrice ? Math.round(basePrice * (1 - discountPercent / 100)) : basePrice;
+
+  // Display values
+  const displayPrice = finalPrice; // The one shown in bold
+  const originalPrice = basePrice; // The one crossed out
 
   // Attribute Display
   const defaultOptionValue = primaryOption?.values?.[0];
@@ -107,20 +102,40 @@ const ProductCard = ({ product, t, tCats }) => {
     handleCloseMenu();
   };
 
+  // Navigation Handler
+  const handleNavigate = () => {
+    // If explicit variant selected, use it.
+    // If not, use the implicit default variant (currentVariant) to ensure consistent state.
+    const targetId = selectedVariant?.id || currentVariant?.id;
+    const query = targetId ? `?variant=${targetId}` : '';
+    router.push(`/product/${product.id}${query}`);
+  };
+
   const hasOptions = primaryOption && primaryOption.values.length > 0;
   const optionCount = primaryOption?.values?.length || 0;
 
   // Translation helpers implementation usage
   const translatedUnit = product.unit ? trOption(product.unit) : '';
-  const translatedSize = product.size || '';
-  // Note: Option VALUES (e.g. "Red", "Small") are dynamic. We usually don't translate them unless we have a specific map.
-  // But KEYS (name="Color") and UNITS ("ml") we can.
 
-  const displaySizeAndUnit = currentOptionValue
-    ? `${currentOptionValue}${translatedUnit}`
-    : product.size
-      ? `${product.size}${translatedUnit}`
-      : '';
+  // Logic to ONLY show size/unit if it truly represents a size.
+  // We check if:
+  // 1. primaryOption name is explicitly "size" (case insensitive)
+  // 2. OR if current option is NOT size (e.g. Color), does product have a static size?
+  const isVariationSize = primaryOption?.name && primaryOption.name.toLowerCase() === 'size';
+
+  // Compute what to show next to Brand
+  let displaySizeAndUnit = '';
+
+  if (isVariationSize) {
+    // If the variation itself IS the size (e.g. 50ml, 100ml selection)
+    displaySizeAndUnit = currentOptionValue ? `${currentOptionValue}${translatedUnit}` : '';
+  } else {
+    // If variation is NOT size (e.g. Colors), ONLY show if product has static size/unit
+    // Do NOT show the color name here.
+    if (product.size || product.unit) {
+      displaySizeAndUnit = `${product.size || ''}${translatedUnit}`;
+    }
+  }
 
   const displayType = product.type ? trType(product.type) : '';
 
@@ -139,6 +154,7 @@ const ProductCard = ({ product, t, tCats }) => {
     >
       {/* Image Area */}
       <Box
+        onClick={handleNavigate}
         sx={{
           position: 'relative',
           pt: '100%',
@@ -148,6 +164,7 @@ const ProductCard = ({ product, t, tCats }) => {
           bgcolor: 'white',
           border: '1px solid',
           borderColor: 'rgba(0,0,0,0.05)',
+          cursor: 'pointer',
         }}
       >
         <CardMedia
@@ -163,6 +180,43 @@ const ProductCard = ({ product, t, tCats }) => {
             objectFit: 'contain',
           }}
         />
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            bgcolor: 'error.main',
+            color: 'white',
+            px: 1,
+            py: 0.25,
+            borderRadius: 1,
+            zIndex: 2,
+            fontSize: '0.75rem',
+            fontWeight: 'bold',
+          }}
+        >
+          -{product.id}%
+        </Box>
+        {/* Discount Badge */}
+        {hasDiscount && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              bgcolor: 'error.main',
+              color: 'white',
+              px: 1,
+              py: 0.25,
+              borderRadius: 1,
+              zIndex: 2,
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+            }}
+          >
+            -{discountPercent}%
+          </Box>
+        )}
       </Box>
 
       {/* Content Area */}
@@ -182,7 +236,7 @@ const ProductCard = ({ product, t, tCats }) => {
           <Typography variant="subtitle2" fontWeight="bold" sx={{ fontSize: '0.95rem' }}>
             {product.brand}
           </Typography>
-          {(product.size || product.unit) && (
+          {displaySizeAndUnit && (
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
               {displaySizeAndUnit}
             </Typography>
@@ -215,7 +269,6 @@ const ProductCard = ({ product, t, tCats }) => {
               color: 'text.secondary',
               fontSize: '0.8rem',
               '&:hover': { color: 'primary.main' },
-              // NOTE: Box is a flex container now
             }}
           >
             {/* The Label Part (Flex 1, truncate) */}
@@ -232,7 +285,9 @@ const ProductCard = ({ product, t, tCats }) => {
               }}
             >
               {trOption(primaryOption.name)} {optionCount > 1 ? `(${optionCount})` : ''} :{' '}
-              {displaySizeAndUnit}
+              {/* If it's a size variation, we already have it in displaySizeAndUnit. 
+                  If it's NOT (e.g. Color), we must show the current value here because displaySizeAndUnit is empty/static. */}
+              {isVariationSize ? displaySizeAndUnit : currentOptionValue}
             </Typography>
 
             {/* The Icon Part (Fixed) */}
@@ -267,10 +322,22 @@ const ProductCard = ({ product, t, tCats }) => {
         </Menu>
 
         {/* Price - Requirement: "Must have most flex grow" */}
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-end', mb: 0.5 }}>
-          <Typography variant="subtitle1" fontWeight="bold">
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 1 }}>
+          <Typography
+            variant="subtitle1"
+            fontWeight="bold"
+            color={hasDiscount ? 'error.main' : 'text.primary'}
+          >
             {typeof displayPrice === 'number' ? displayPrice.toLocaleString() : displayPrice} ֏
           </Typography>
+          {hasDiscount && (
+            <Typography
+              variant="caption"
+              sx={{ textDecoration: 'line-through', color: 'text.secondary', fontSize: '0.8rem' }}
+            >
+              {typeof originalPrice === 'number' ? originalPrice.toLocaleString() : originalPrice} ֏
+            </Typography>
+          )}
         </Box>
 
         {/* Rating */}
@@ -341,9 +408,11 @@ const ProductCard = ({ product, t, tCats }) => {
       </Box>
     </Card>
   );
-};
+});
 
-export default function ProductGrid({ products, filters, sortBy }) {
+ProductCard.displayName = 'ProductCard';
+
+export default function ProductGrid({ products }) {
   const t = useTranslations('Shop');
   const tCats = useTranslations('CategoryNames');
 
@@ -352,7 +421,7 @@ export default function ProductGrid({ products, filters, sortBy }) {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Grid container spacing={2}>
+      <Grid container spacing={2} columnSpacing={{ xs: 1, sm: 2 }}>
         {displayProducts.map((product) => (
           <Grid size={{ xs: 6, sm: 6, md: 4, lg: 3 }} key={product.id}>
             <ProductCard product={product} t={t} tCats={tCats} />

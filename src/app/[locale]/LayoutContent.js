@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import CategoriesBar from '../../components/CategoriesBar';
@@ -13,7 +14,11 @@ function InnerLayout({ children, locale }) {
   const pathname = usePathname();
   const { loading: authLoading } = useAuth();
   const { loading: categoriesLoading } = useCategories();
-  const { isLoading: navigationLoading } = useLoading();
+  const { isLoading: navigationLoading, setLoading } = useLoading();
+
+  useEffect(() => {
+    setLoading(false);
+  }, [pathname, setLoading]);
 
   // Show loading screen while contexts are initializing
   // OR during global navigation

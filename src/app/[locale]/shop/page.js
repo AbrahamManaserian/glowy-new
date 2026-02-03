@@ -9,7 +9,7 @@ export default async function ShopPage({ searchParams }) {
   // Extract filters from params
   const filters = {
     minPrice: Number(params.minPrice) || 0,
-    maxPrice: Number(params.maxPrice) || 1000,
+    maxPrice: Number(params.maxPrice) || 0,
     discounted: params.discounted === 'true',
     categories: Array.isArray(params.category) ? params.category : params.category ? [params.category] : [],
     subcategories: Array.isArray(params.subcategory)
@@ -27,8 +27,22 @@ export default async function ShopPage({ searchParams }) {
   };
 
   // Fetch data
+  const page = Number(params.page) || 1;
+  const LIMIT = 4; // User requested limit 4
+  const cursorId = params.cursorId || null;
+  const direction = params.direction || null;
 
-  const products = await getCachedProducts(filters);
+  const { products, total, totalPages } = await getCachedProducts(filters, page, LIMIT, cursorId, direction);
 
-  return <ShopClient initialProducts={products} searchParams={params} />;
+  return (
+    <ShopClient
+      initialProducts={products}
+      searchParams={params}
+      pagination={{
+        total,
+        totalPages,
+        currentPage: page,
+      }}
+    />
+  );
 }

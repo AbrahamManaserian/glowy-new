@@ -25,12 +25,14 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 
 import FilterSidebar from '../../../components/Shop/FilterSidebar';
 import ProductGrid from '../../../components/Shop/ProductGrid';
+import { CustomPagination } from '../../../components/CustomPagination';
 
 import { useCategories } from '../../../context/CategoriesContext';
 import { useUI } from '../../../context/UIContext';
 
-export default function ShopClient({ initialProducts, searchParams }) {
+export default function ShopClient({ initialProducts, searchParams, pagination }) {
   const t = useTranslations('Shop');
+
   const tCats = useTranslations('CategoryNames');
   const router = useRouter();
   const filterSidebarRef = useRef(null);
@@ -90,11 +92,11 @@ export default function ShopClient({ initialProducts, searchParams }) {
   const handleSortChange = (event) => {
     const value = event.target.value;
     setSortBy(value);
-    updateUrl({ ...filters, sort: value });
+    updateUrl({ ...filters, sort: value }, 1); // Reset to page 1 on sort
   };
 
   const handleApplyFilters = (newFilters) => {
-    updateUrl({ ...newFilters, sort: sortBy });
+    updateUrl({ ...newFilters, sort: sortBy }, 1); // Reset to page 1 on filter
     closeMobileMenus();
   };
 
@@ -114,8 +116,10 @@ export default function ShopClient({ initialProducts, searchParams }) {
     router.push('/shop');
   };
 
-  const updateUrl = (currentFilters) => {
+  const updateUrl = (currentFilters, page = 1) => {
     const params = new URLSearchParams();
+
+    if (page > 1) params.set('page', page.toString());
 
     if (currentFilters.sort && currentFilters.sort !== 'default') params.set('sort', currentFilters.sort);
 
@@ -135,6 +139,54 @@ export default function ShopClient({ initialProducts, searchParams }) {
     (currentFilters.sizes || []).forEach((s) => params.append('sizes', s));
 
     router.push(`/shop?${params.toString()}`);
+  };
+
+  const handlePageChange = (event, targetPage) => {
+    // Determine direction and cursor
+    const params = new URLSearchParams(window.location.search);
+    const currentPage = Number(getParam('page')) || 1;
+
+    // Clear old cursor params
+    params.delete('cursorId');
+    params.delete('direction');
+    params.set('page', targetPage.toString());
+
+    // Logic:
+    // 1. First Page: Direct
+    // 2. Last Page: Direct
+    // 3. Next Page (Sibling): Use last item of current list as cursor
+    // 4. Prev Page (Sibling): Use first item of current list as cursor
+
+    // We need current products range to determine cursors
+    // initialProducts from props contains the current page's items
+    const currentProducts = initialProducts || [];
+    const firstItem = currentProducts[0];
+    const lastItem = currentProducts[currentProducts.length - 1];
+
+    if (targetPage === 1) {
+      // Go to First Page (Clean URL)
+      // No cursor needed
+    } else if (pagination && targetPage === pagination.totalPages) {
+      // Go to Last Page
+      params.set('direction', 'last');
+    } else if (targetPage > currentPage && lastItem) {
+      // Next Page (or forward sibling)
+      // Standard Firestore pagination usually only supports Next/Prev by 1 page unless we have cursors for others.
+      // Given user constraint, we assume sequential or close jumps.
+      // However, if I jump from 2 to 4, I can't use Page 2's cursor...
+      // BUT user said "available pages are... siblings".
+      // If I am at 2, available are 1, 3, Last.
+      // So I only ever jump to 3 (which is Next).
+      params.set('direction', 'next');
+      params.set('cursorId', lastItem.id);
+    } else if (targetPage < currentPage && firstItem) {
+      // Prev Page (or backward sibling)
+      params.set('direction', 'prev');
+      params.set('cursorId', firstItem.id);
+    }
+
+    router.push(`/shop?${params.toString()}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const hasParams = Object.keys(searchParams || {}).some((k) => !['locale'].includes(k));
@@ -238,7 +290,7 @@ export default function ShopClient({ initialProducts, searchParams }) {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4, position: 'relative' }}>
+    <Container maxWidth="xl" sx={{ p: { xs: '10px', sm: 4 }, position: 'relative' }}>
       {/* Header & Breadcrumbs */}
       <Box sx={{ mb: 4 }}>
         {hasParams && (
@@ -404,7 +456,15 @@ export default function ShopClient({ initialProducts, searchParams }) {
 
         {/* Product Grid */}
         <Grid size={{ xs: 12, md: 9, lg: 9 }}>
-          <ProductGrid products={initialProducts} filters={filters} sortBy={sortBy} />
+          <ProductGrid products={initialProducts} />
+
+          {pagination && pagination.totalPages > 1 && (
+            <CustomPagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              handlePageChange={handlePageChange}
+            />
+          )}
         </Grid>
       </Grid>
     </Container>
