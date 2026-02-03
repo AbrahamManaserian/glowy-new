@@ -146,7 +146,7 @@ export const getCachedProducts = async (
     async () => fetchProductsPage(filters, pageLimit, cursorId, direction),
     [`products-page-${filterKey}-${cursorId || 'start'}-${direction || 'first'}`],
     // { revalidate: 1, tags: ['products'] },
-    { revalidate: 3600, tags: ['products'] },
+    { revalidate: 3601, tags: ['products'] },
   )();
 
   return {
