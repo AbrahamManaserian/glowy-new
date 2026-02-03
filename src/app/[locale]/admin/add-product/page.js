@@ -60,7 +60,6 @@ const initialFormState = {
   size: '',
   unit: '',
   price: '',
-  previousPrice: '',
   discount: '',
   quantity: 1,
   images: [],
@@ -121,6 +120,7 @@ const generateVariants = (options, existingVariants, basePrice, baseQuantity, ba
       price: basePrice || '',
       quantity: baseQuantity || '',
       discount: baseDiscount || '0',
+      image: null, // Specific image for this variant (null = use main product image)
       sku: '',
     };
   });
@@ -535,6 +535,7 @@ export default function AddProductPage() {
             quantity: parseInt(v.quantity, 10) || 0,
             attributes: v.attributes,
             name: v.name,
+            image: v.image || null, // Pass through the raw image selection
             inStock: parseInt(v.quantity, 10) > 0,
             // Initialize stats
             salesCount: 0,
@@ -720,10 +721,20 @@ export default function AddProductPage() {
         })),
 
         // The Variants
-        variants: finalVariants.map((v) => ({
-          ...v,
-          inStock: v.quantity > 0,
-        })),
+        variants: finalVariants.map((v) => {
+          let variantImageUrl = null;
+          if (v.image) {
+            const imgIndex = formData.images.indexOf(v.image);
+            if (imgIndex !== -1 && imageUrls[imgIndex]) {
+              variantImageUrl = imageUrls[imgIndex];
+            }
+          }
+          return {
+            ...v,
+            image: variantImageUrl,
+            inStock: v.quantity > 0,
+          };
+        }),
 
         // CRITICAL FOR SORTING:
         price: minPrice, // Default sort price (cheapest option)
@@ -1022,18 +1033,6 @@ export default function AddProductPage() {
                   fullWidth
                   size="small"
                   type="number"
-                  label="Previous Price"
-                  name="previousPrice"
-                  value={formData.previousPrice}
-                  onChange={handleChange}
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
                   label="Discount (%)"
                   name="discount"
                   value={formData.discount}
@@ -1263,16 +1262,50 @@ export default function AddProductPage() {
                   <TableHead>
                     <TableRow>
                       <TableCell>Variant</TableCell>
-                      <TableCell width="20%">Price</TableCell>
+                      <TableCell width="15%">Image</TableCell>
+                      <TableCell width="15%">Price</TableCell>
                       <TableCell width="15%">Quantity</TableCell>
                       <TableCell width="15%">Discount (%)</TableCell>
-                      <TableCell width="35%">SKU</TableCell>
+                      <TableCell width="25%">SKU</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {formData.variants.map((variant, index) => (
                       <TableRow key={index}>
                         <TableCell>{variant.name}</TableCell>
+                        <TableCell>
+                          <FormControl fullWidth size="small">
+                            <Select
+                              value={formData.images.includes(variant.image) ? variant.image : ''}
+                              displayEmpty
+                              onChange={(e) => handleVariantChange(index, 'image', e.target.value)}
+                              renderValue={(selected) => {
+                                if (!selected) return <Typography variant="caption">Default</Typography>;
+                                return (
+                                  <Box
+                                    component="img"
+                                    src={selected}
+                                    sx={{ width: 30, height: 30, objectFit: 'contain' }}
+                                  />
+                                );
+                              }}
+                            >
+                              <MenuItem value="">
+                                <em>Default</em>
+                              </MenuItem>
+                              {formData.images.map((img, i) => (
+                                <MenuItem key={i} value={img}>
+                                  <Box
+                                    component="img"
+                                    src={img}
+                                    sx={{ width: 40, height: 40, objectFit: 'contain', mr: 1 }}
+                                  />
+                                  Image {i + 1}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </TableCell>
                         <TableCell>
                           <TextField
                             size="small"
