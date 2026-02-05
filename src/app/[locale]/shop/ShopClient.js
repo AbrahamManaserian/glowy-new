@@ -62,6 +62,7 @@ export default function ShopClient({ initialProducts, searchParams, pagination }
     categories: getAllParams('category'),
     subcategories: getAllParams('subcategory'),
     types: getAllParams('type'),
+    notes: getAllParams('notes'),
     brands: getAllParams('brands'),
     sizes: getAllParams('sizes'),
     originalBrand: getParam('originalBrand') === 'true',
@@ -77,6 +78,7 @@ export default function ShopClient({ initialProducts, searchParams, pagination }
       categories: getAllParams('category'),
       subcategories: getAllParams('subcategory'),
       types: getAllParams('type'),
+      notes: getAllParams('notes'),
       brands: getAllParams('brands'),
       sizes: getAllParams('sizes'),
       originalBrand: getParam('originalBrand') === 'true',
@@ -133,6 +135,7 @@ export default function ShopClient({ initialProducts, searchParams, pagination }
     if (currentFilters.onlyStock) params.set('onlyStock', 'true');
 
     (currentFilters.categories || []).forEach((c) => params.append('category', c));
+    (currentFilters.notes || []).forEach((c) => params.append('notes', c));
     (currentFilters.subcategories || []).forEach((s) => params.append('subcategory', s));
     (currentFilters.types || []).forEach((t) => params.append('type', t));
     (currentFilters.brands || []).forEach((b) => params.append('brands', b));

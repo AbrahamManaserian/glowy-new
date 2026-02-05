@@ -37,17 +37,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import Resizer from 'react-image-file-resizer';
 
 import { db, storage } from '../../../../../firebase';
-import {
-  doc,
-  getDoc,
-  setDoc,
-  deleteDoc,
-  arrayUnion,
-  runTransaction,
-  serverTimestamp,
-} from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, arrayUnion, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 
 const units = ['ml', 'g', 'kg', 'l', 'pcs'];
@@ -80,53 +72,50 @@ const initialFormState = {
 };
 
 const generateVariants = (options, existingVariants, basePrice, baseQuantity, baseDiscount) => {
-  const validOptions = options.filter((o) => o.values.length > 0);
+  const validOptions = options.filter((o) => Array.isArray(o.values) && o.values.length > 0);
   if (validOptions.length === 0) return [];
 
-  const cartesian = (sets) => {
-    return sets.reduce(
-      (acc, curr) => {
-        return acc.flatMap((x) => curr.map((y) => [...x, y]));
-      },
-      [[]],
-    );
-  };
+  // Generate independent variants for each option value (Union instead of Intersection)
+  return validOptions.flatMap((option) =>
+    option.values.map((value) => {
+      const uniqueKey = value;
+      // Note: We only set the attribute for this specific option group
+      const attributes = { [option.name]: value };
 
-  const optionValues = validOptions.map((o) => o.values);
-  const combinations = cartesian(optionValues);
+      const existing = existingVariants.find(
+        (v) => v.name === uniqueKey || (v.attributes && v.attributes[option.name] === value),
+      );
 
-  return combinations.map((combination) => {
-    const attributes = {};
-    const nameParts = [];
+      if (existing) {
+        // Return existing but ensure attributes are current
+        return {
+          ...existing,
+          name: uniqueKey,
+          attributes,
+        };
+      }
 
-    validOptions.forEach((option, index) => {
-      attributes[option.name] = combination[index];
-      nameParts.push(combination[index]);
-    });
+      // Try heuristic match
+      const potentialParent = existingVariants.find(
+        (v) => uniqueKey.includes(v.name) || v.name.includes(uniqueKey),
+      );
 
-    const uniqueKey = nameParts.join(' / ');
-    const existing = existingVariants.find((v) => v.name === uniqueKey);
-
-    if (existing) {
-      return existing;
-    }
-
-    return {
-      name: uniqueKey,
-      attributes,
-      price: basePrice || '',
-      quantity: baseQuantity || '',
-      discount: baseDiscount || '0',
-      image: existing ? existing.image : null,
-      sku: '',
-      // init stats for new variant
-      salesCount: 0,
-      rating: 0,
-      reviewCount: 0,
-      views: 0,
-    };
-  });
-};
+      return {
+        name: uniqueKey,
+        attributes,
+        price: potentialParent ? potentialParent.price : basePrice || '',
+        quantity: potentialParent ? potentialParent.quantity : baseQuantity || '',
+        discount: potentialParent ? potentialParent.discount : baseDiscount || '0',
+        image: potentialParent ? potentialParent.image : null,
+        sku: '',
+        salesCount: potentialParent ? potentialParent.salesCount : 0,
+        rating: potentialParent ? potentialParent.rating : 0,
+        reviewCount: potentialParent ? potentialParent.reviewCount : 0,
+        views: potentialParent ? potentialParent.views : 0,
+      };
+    }),
+  );
+};;
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -512,80 +501,79 @@ export default function EditProductPage() {
     setFormData((prev) => ({ ...prev, customFields: updated }));
   };
 
-  const handleAddOption = () => {
+  const handleAddOption = useCallback(() => {
     setFormData((prev) => ({
       ...prev,
       productOptions: [...prev.productOptions, { name: '', values: [], currentValue: '' }],
     }));
-  };
-  const handleDeleteOption = (index) => {
-    const updated = formData.productOptions.filter((_, i) => i !== index);
-    const newVariants = generateVariants(
-      updated,
-      formData.variants,
-      formData.price,
-      formData.quantity,
-      formData.discount,
-    );
-    setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
-  };
-  const handleOptionNameChange = (index, value) => {
-    const updated = [...formData.productOptions];
-    updated[index].name = value;
-    if (
-      value.trim().toLowerCase() === 'size' &&
-      formData.size &&
-      !updated[index].values.includes(formData.size)
-    ) {
-      updated[index].values.push(formData.size);
-    }
-    const newVariants = generateVariants(
-      updated,
-      formData.variants,
-      formData.price,
-      formData.quantity,
-      formData.discount,
-    );
-    setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
-  };
-  const handleOptionValueInputChange = (index, value) => {
-    const updated = [...formData.productOptions];
-    updated[index].currentValue = value;
-    setFormData((prev) => ({ ...prev, productOptions: updated }));
-  };
-  const handleAddOptionValue = (index) => {
-    const updated = [...formData.productOptions];
-    const val = updated[index].currentValue.trim();
-    if (val && !updated[index].values.includes(val)) {
-      updated[index].values.push(val);
-      updated[index].currentValue = '';
-      const newVariants = generateVariants(
-        updated,
-        formData.variants,
-        formData.price,
-        formData.quantity,
-        formData.discount,
+  }, []);
+
+  const handleDeleteOption = useCallback((index) => {
+    setFormData((prev) => {
+      const updated = prev.productOptions.filter((_, i) => i !== index);
+      const newVariants = generateVariants(updated, prev.variants, prev.price, prev.quantity, prev.discount);
+      return { ...prev, productOptions: updated, variants: newVariants };
+    });
+  }, []);
+
+  const handleOptionNameChange = useCallback((index, value) => {
+    setFormData((prev) => {
+      const updated = prev.productOptions.map((opt, i) => (i === index ? { ...opt, name: value } : opt));
+
+      const newVariants = generateVariants(updated, prev.variants, prev.price, prev.quantity, prev.discount);
+      return { ...prev, productOptions: updated, variants: newVariants };
+    });
+  }, []);
+
+  const handleOptionValueInputChange = useCallback((index, value) => {
+    setFormData((prev) => {
+      const updated = prev.productOptions.map((opt, i) =>
+        i === index ? { ...opt, currentValue: value } : opt,
       );
-      setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
-    }
-  };
-  const handleDeleteOptionValue = (optionIndex, valueToDelete) => {
-    const updated = [...formData.productOptions];
-    updated[optionIndex].values = updated[optionIndex].values.filter((v) => v !== valueToDelete);
-    const newVariants = generateVariants(
-      updated,
-      formData.variants,
-      formData.price,
-      formData.quantity,
-      formData.discount,
-    );
-    setFormData((prev) => ({ ...prev, productOptions: updated, variants: newVariants }));
-  };
-  const handleVariantChange = (index, field, value) => {
-    const updated = [...formData.variants];
-    updated[index][field] = value;
-    setFormData((prev) => ({ ...prev, variants: updated }));
-  };
+      return { ...prev, productOptions: updated };
+    });
+  }, []);
+
+  const handleAddOptionValue = useCallback((index) => {
+    setFormData((prev) => {
+      const updated = [...prev.productOptions];
+      const val = updated[index].currentValue.trim();
+      if (val && !updated[index].values.includes(val)) {
+        updated[index] = {
+          ...updated[index],
+          values: [...updated[index].values, val],
+          currentValue: '',
+        };
+        const newVariants = generateVariants(
+          updated,
+          prev.variants,
+          prev.price,
+          prev.quantity,
+          prev.discount,
+        );
+        return { ...prev, productOptions: updated, variants: newVariants };
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleDeleteOptionValue = useCallback((optionIndex, valueToDelete) => {
+    setFormData((prev) => {
+      const updated = prev.productOptions.map((opt, i) =>
+        i === optionIndex ? { ...opt, values: opt.values.filter((v) => v !== valueToDelete) } : opt,
+      );
+      const newVariants = generateVariants(updated, prev.variants, prev.price, prev.quantity, prev.discount);
+      return { ...prev, productOptions: updated, variants: newVariants };
+    });
+  }, []);
+
+  const handleVariantChange = useCallback((index, field, value) => {
+    setFormData((prev) => {
+      const updated = [...prev.variants];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, variants: updated };
+    });
+  }, []);
 
   const resetForm = () => {
     setFormData(initialFormState);
@@ -714,9 +702,8 @@ export default function EditProductPage() {
           .trim()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '');
-      const slugBase = `${cleanSlug(formData.brand)}-${cleanSlug(formData.model)}-${cleanSlug(formData.type)}`;
+      const slugBase = `${cleanSlug(formData.brand)}-${cleanSlug(formData.model)}`;
 
-      const searchName = `${formData.brand} ${formData.model} ${formData.type || ''}`.trim();
       const name = `${formData.brand} ${formData.model} `.trim();
 
       const combinedText = [
@@ -725,9 +712,6 @@ export default function EditProductPage() {
         formData.type,
         formData.category,
         formData.subcategory,
-        formData.descriptionEn,
-        formData.descriptionRu,
-        formData.descriptionAm,
       ].join(' ');
 
       const uniqueKeywords = [
@@ -740,17 +724,37 @@ export default function EditProductPage() {
         ),
       ];
 
-      const aggregatedAttributes = {};
+      // D. Filter Aggregation & Combination Logic
+      const filters = new Set();
+
+      // Add common fields to filters
+      if (formData.category) filters.add(`category:${formData.category}`);
+      if (formData.subcategory) filters.add(`subcategory:${formData.subcategory}`);
+      if (formData.type) filters.add(`type:${formData.type}`);
+      if (formData.brand) filters.add(`brand:${formData.brand}`);
+      if (formData.size) filters.add(`size:${formData.size}`);
+
+      // Add perfume notes to filters if they exist (using generic 'notes' key)
+      if (formData.category === 'fragrance') {
+        const notesSet = new Set([
+          ...(formData.topNotes || []),
+          ...(formData.middleNotes || []),
+          ...(formData.baseNotes || []),
+        ]);
+        notesSet.forEach((note) => filters.add(`notes:${note}`));
+      }
+
       finalVariants.forEach((v) => {
-        Object.entries(v.attributes).forEach(([key, val]) => {
-          const filterKey = `filter_${key}`;
-          if (!aggregatedAttributes[filterKey]) aggregatedAttributes[filterKey] = new Set();
-          aggregatedAttributes[filterKey].add(val);
-        });
-      });
-      const filterData = {};
-      Object.keys(aggregatedAttributes).forEach((k) => {
-        filterData[k] = Array.from(aggregatedAttributes[k]);
+        // We only index variants that actually have attributes
+        const entries = Object.entries(v.attributes);
+
+        if (entries.length > 0) {
+          // 2. Individual Attributes
+          entries.forEach(([key, val]) => {
+            // lowercased key for filters to match parent fields like "size"
+            filters.add(`${key.toLowerCase()}:${val}`);
+          });
+        }
       });
 
       let allNotes = [];
@@ -911,13 +915,12 @@ export default function EditProductPage() {
         minPrice: minPrice,
         maxPrice: maxPrice,
 
-        searchName: searchName,
         name: name,
         // Update Slug (Keep ID)
         slug: `${slugBase}-${currentProductId}`,
         keywords: uniqueKeywords.slice(0, 500),
 
-        ...filterData,
+        filters: Array.from(filters),
 
         customFields: formData.customFields.reduce((acc, curr) => {
           if (curr.name) acc[curr.name] = curr.value;
@@ -1388,104 +1391,11 @@ export default function EditProductPage() {
           </Grid>
 
           {/* Product Variants Table (Generated) */}
-          {formData.variants && formData.variants.length > 0 && (
-            <Grid size={{ xs: 12 }}>
-              <Paper sx={{ p: { xs: 2, md: 3 } }}>
-                <Typography variant="h6" gutterBottom>
-                  Product Variants
-                </Typography>
-                <TableContainer sx={{ overflowX: 'auto' }}>
-                  <Table size="small" sx={{ minWidth: 650 }}>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Variant</TableCell>
-                        <TableCell width="15%">Image</TableCell>
-                        <TableCell width="15%">Price</TableCell>
-                        <TableCell width="15%">Quantity</TableCell>
-                        <TableCell width="15%">Discount (%)</TableCell>
-                        <TableCell width="25%">SKU</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {formData.variants.map((variant, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{variant.name}</TableCell>
-                          <TableCell>
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={formData.images.includes(variant.image) ? variant.image : ''}
-                                displayEmpty
-                                onChange={(e) => handleVariantChange(index, 'image', e.target.value)}
-                                renderValue={(selected) => {
-                                  if (!selected) return <Typography variant="caption">Default</Typography>;
-                                  return (
-                                    <Box
-                                      component="img"
-                                      src={selected}
-                                      sx={{ width: 30, height: 30, objectFit: 'contain' }}
-                                    />
-                                  );
-                                }}
-                              >
-                                <MenuItem value="">
-                                  <em>Default</em>
-                                </MenuItem>
-                                {formData.images.map((img, i) => (
-                                  <MenuItem key={i} value={img}>
-                                    <Box
-                                      component="img"
-                                      src={img}
-                                      sx={{ width: 40, height: 40, objectFit: 'contain', mr: 1 }}
-                                    />
-                                    Image {i + 1}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              type="number"
-                              fullWidth
-                              value={variant.price}
-                              onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              type="number"
-                              fullWidth
-                              value={variant.quantity}
-                              onChange={(e) => handleVariantChange(index, 'quantity', e.target.value)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              type="number"
-                              fullWidth
-                              value={variant.discount}
-                              onChange={(e) => handleVariantChange(index, 'discount', e.target.value)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              fullWidth
-                              value={variant.sku}
-                              onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Paper>
-            </Grid>
-          )}
+          <VariantTable
+            variants={formData.variants}
+            images={formData.images}
+            onVariantChange={handleVariantChange}
+          />
 
           {/* Descriptions Section */}
           <Grid size={{ xs: 12 }}>
@@ -1661,3 +1571,108 @@ export default function EditProductPage() {
     </Box>
   );
 }
+
+const VariantTable = memo(({ variants, images, onVariantChange }) => {
+  if (!variants || variants.length === 0) return null;
+
+  return (
+    <Grid size={{ xs: 12 }}>
+      <Paper sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="h6" gutterBottom>
+          Product Variants
+        </Typography>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Variant</TableCell>
+                <TableCell width="15%">Image</TableCell>
+                <TableCell width="15%">Price</TableCell>
+                <TableCell width="15%">Quantity</TableCell>
+                <TableCell width="15%">Discount (%)</TableCell>
+                <TableCell width="25%">SKU</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {variants.map((variant, index) => (
+                <TableRow key={variant.id || index}>
+                  <TableCell>{variant.name}</TableCell>
+                  <TableCell>
+                    <FormControl fullWidth size="small">
+                      <Select
+                        value={images.includes(variant.image) ? variant.image : ''}
+                        displayEmpty
+                        onChange={(e) => onVariantChange(index, 'image', e.target.value)}
+                        renderValue={(selected) => {
+                          if (!selected) return <Typography variant="caption">Default</Typography>;
+                          return (
+                            <Box
+                              component="img"
+                              src={selected}
+                              sx={{ width: 30, height: 30, objectFit: 'contain' }}
+                            />
+                          );
+                        }}
+                      >
+                        <MenuItem value="">
+                          <em>Default</em>
+                        </MenuItem>
+                        {images.map((img, i) => (
+                          <MenuItem key={i} value={img}>
+                            <Box
+                              component="img"
+                              src={img}
+                              sx={{ width: 40, height: 40, objectFit: 'contain', mr: 1 }}
+                            />
+                            Image {i + 1}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      size="small"
+                      type="number"
+                      fullWidth
+                      value={variant.price}
+                      onChange={(e) => onVariantChange(index, 'price', e.target.value)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      size="small"
+                      type="number"
+                      fullWidth
+                      value={variant.quantity}
+                      onChange={(e) => onVariantChange(index, 'quantity', e.target.value)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      size="small"
+                      type="number"
+                      fullWidth
+                      value={variant.discount}
+                      onChange={(e) => onVariantChange(index, 'discount', e.target.value)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      value={variant.sku}
+                      onChange={(e) => onVariantChange(index, 'sku', e.target.value)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Grid>
+  );
+});
+
+VariantTable.displayName = 'VariantTable';

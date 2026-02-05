@@ -45,6 +45,7 @@ async function fetchProductCount(filters) {
 
 // Helper to build constraints (reused)
 function buildConstraints(filters) {
+  
   const constraints = [];
   // 1. Sorting (Note: Sort must be applied to query but for COUNT it typically doesn't matter unless limits,
   // but for WHERE clauses it matters. OrderBy usually strictly coupled with StartAfter.)
@@ -52,24 +53,66 @@ function buildConstraints(filters) {
   // NOTE: For count, OrderBy is irrelevant unless we have complexity.
   // We include Where clauses only.
 
-  if (filters.minPrice > 0) constraints.push(where('price', '>=', filters.minPrice));
-  if (filters.maxPrice > 0) constraints.push(where('price', '<=', filters.maxPrice));
-  if (filters.originalBrand) constraints.push(where('isOriginal', '==', true));
-  if (filters.onlyStock) constraints.push(where('stock', '>', 0));
+  if (filters.minPrice > 0) constraints.push(where('maxPrice', '>=', filters.minPrice)); // At least one variant is expensive enough
+  if (filters.maxPrice > 0) constraints.push(where('minPrice', '<=', filters.maxPrice)); // At least one variant is cheap enough
+  if (filters.originalBrand) constraints.push(where('original', '==', true)); // Changed isOriginal -> original
+
+  // Handle Category/Subcategory (Allow array 'IN' or single '==')
+  if (filters.category) {
+    if (Array.isArray(filters.category) && filters.category.length > 0) {
+      constraints.push(where('category', 'in', filters.category.slice(0, 10)));
+    } else if (typeof filters.category === 'string') {
+      constraints.push(where('category', '==', filters.category));
+    }
+  }
+
+  if (filters.subcategory) {
+    if (Array.isArray(filters.subcategory) && filters.subcategory.length > 0) {
+      constraints.push(where('subcategory', 'in', filters.subcategory.slice(0, 10)));
+    } else if (typeof filters.subcategory === 'string') {
+      constraints.push(where('subcategory', '==', filters.subcategory));
+    }
+  }
+
+  if (filters.onlyStock) constraints.push(where('inStock', '==', true)); // Changed stock > 0 -> inStock == true
   if (filters.discounted) constraints.push(where('discount', '>', 0));
 
-  if (filters.categories?.length > 0)
-    constraints.push(where('category', 'in', filters.categories.slice(0, 10)));
-  else if (filters.subcategories?.length > 0)
-    constraints.push(where('subcategory', 'in', filters.subcategories.slice(0, 10))); // 'in' mutually exclusive usually
-  else if (filters.types?.length > 0) constraints.push(where('type', 'in', filters.types.slice(0, 10)));
-  else if (filters.brands?.length > 0) constraints.push(where('brand', 'in', filters.brands.slice(0, 10)));
+  if (filters.types?.length > 0) {
+    // Ensure we handle both string and array just in case, but usually array
+    const types = Array.isArray(filters.types) ? filters.types : [filters.types];
+    constraints.push(where('type', 'in', types.slice(0, 10)));
+  }
 
-  // Multiple arrays
-  if (filters.sizes?.length > 0)
-    constraints.push(where('sizes', 'array-contains-any', filters.sizes.slice(0, 10)));
-  if (filters.notes?.length > 0)
-    constraints.push(where('perfumeNotes', 'array-contains-any', filters.notes.slice(0, 10)));
+  if (filters.brands?.length > 0) {
+    const brands = Array.isArray(filters.brands) ? filters.brands : [filters.brands];
+    constraints.push(where('brand', 'in', brands.slice(0, 10)));
+  }
+
+  // === UPDATED LOGIC: Use 'filters' array for combined attributes (Size, Notes, etc.) ===
+  // The 'filters' field in Firestore contains strings like:
+  // "size:100ml", "notes:Rose", "brand:Chanel", "category:Fragrance"
+  // We combine all array-based attribute filters into one list to use 'array-contains-any'.
+
+  const filterTags = [];
+
+  // 1. Map Sizes -> "size:VALUE"
+  if (filters.sizes?.length > 0) {
+    const sizes = Array.isArray(filters.sizes) ? filters.sizes : [filters.sizes];
+    sizes.forEach((s) => filterTags.push(`size:${s}`));
+  }
+
+  // 2. Map Notes -> "notes:VALUE"
+  if (filters.notes?.length > 0) {
+    const notes = Array.isArray(filters.notes) ? filters.notes : [filters.notes];
+    notes.forEach((n) => filterTags.push(`notes:${n}`));
+  }
+
+  // 3. Apply the combined constraint
+  if (filterTags.length > 0) {
+    // Firestore Limit: max 10 items in array-contains-any
+
+    constraints.push(where('filters', 'array-contains-any', filterTags.slice(0, 10)));
+  }
 
   return constraints;
 }
@@ -78,12 +121,15 @@ function buildConstraints(filters) {
 const fetchProductsPage = async (filters, pageLimit, cursorId, direction) => {
   try {
     let q = collection(db, 'products');
+
     const constraints = buildConstraints(filters);
 
     // Sorting MUST be applied before pagination
     const sort = filters.sort || 'default';
-    if (sort === 'price-asc') constraints.push(orderBy('minPrice', 'asc'));
-    else if (sort === 'price-desc') constraints.push(orderBy('maxPrice', 'desc'));
+    if (sort === 'price-asc')
+      constraints.push(orderBy('minPrice', 'asc')); // Changed price -> minPrice
+    else if (sort === 'price-desc')
+      constraints.push(orderBy('maxPrice', 'desc')); // Changed price -> maxPrice
     else if (sort === 'newest') constraints.push(orderBy('createdAt', 'desc'));
     else if (sort === 'oldest') constraints.push(orderBy('createdAt', 'asc'));
     // Default fallback order usually needed for stable pagination if no sort
@@ -135,8 +181,8 @@ export const getCachedProducts = async (
   const total = await unstable_cache(
     async () => fetchProductCount(filters),
     [`products-count-${filterKey}`],
-    // { revalidate: 1, tags: ['products'] },
-    { revalidate: 1, tags: ['products'] },
+    // { revalidate: 3600, tags: ['products'] }
+    { cache: 'no-store', tags: ['products'] },
   )();
 
   // 2. Get Page Data (Cached by specific page/cursor params)
@@ -145,8 +191,8 @@ export const getCachedProducts = async (
   const products = await unstable_cache(
     async () => fetchProductsPage(filters, pageLimit, cursorId, direction),
     [`products-page-${filterKey}-${cursorId || 'start'}-${direction || 'first'}`],
-    // { revalidate: 1, tags: ['products'] },
-    { revalidate: 3601, tags: ['products'] },
+    // { revalidate: 3600, tags: ['products'] }
+    { cache: 'no-store', tags: ['products'] },
   )();
 
   return {
