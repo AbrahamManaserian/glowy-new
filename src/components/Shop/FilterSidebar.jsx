@@ -31,6 +31,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import { styled } from '@mui/material/styles';
 import { useTranslations } from 'next-intl';
 import { useCategories } from '../../context/CategoriesContext';
@@ -532,6 +533,38 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
             {activeCategoryKey ? (
               <>
                 {/* Subcategories View */}
+                {/* 1. "All Items" option */}
+                <FormControlLabel
+                  control={
+                    <Radio
+                      checked={!localFilters.subcategories || localFilters.subcategories.length === 0}
+                      onChange={() => setLocalFilters({ ...localFilters, subcategories: [], types: [] })}
+                      size="small"
+                      sx={{
+                        color: 'text.secondary',
+                        '&.Mui-checked': { color: 'var(--active-color)' },
+                        py: 0.5,
+                      }}
+                    />
+                  }
+                  label={
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        mt: '1px',
+                        fontWeight:
+                          !localFilters.subcategories || localFilters.subcategories.length === 0
+                            ? 'bold'
+                            : 'normal',
+                      }}
+                    >
+                      {t('all')}
+                    </Typography>
+                  }
+                  sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', mb: 1 }}
+                />
+
+                {/* 2. Actual Subcategories */}
                 {Object.entries(subCategoriesList).map(([key, val]) => (
                   <FormControlLabel
                     key={key}
@@ -555,9 +588,10 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
                     sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', mb: 1 }}
                   />
                 ))}
+
                 <Button
                   size="small"
-                  // color="success"
+                  startIcon={<NavigateNextIcon sx={{ transform: 'rotate(180deg)' }} />}
                   onClick={() =>
                     setLocalFilters({ ...localFilters, categories: [], subcategories: [], types: [] })
                   }
@@ -568,14 +602,67 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
               </>
             ) : (
               // Main Categories View
-              Object.entries(categories).map(([key, val]) => (
+              <Box>
+                {Object.entries(categories).map(([key, val]) => (
+                  <Box
+                    key={key}
+                    onClick={() => handleCategoryClick(key)}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      py: 1,
+                      borderBottom: '1px dashed #eee',
+                      '&:last-child': { borderBottom: 'none' },
+                      '&:hover': { bgcolor: 'action.hover', borderRadius: 1, px: 1, mx: -1 },
+                      transition: '0.2s',
+                    }}
+                  >
+                    <Typography variant="body1">{tCats.has(key) ? tCats(key) : val.label || key}</Typography>
+                    <NavigateNextIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </AccordionDetails>
+        </Accordion>
+
+        <Divider sx={{ my: 1 }} />
+
+        {/* Type Filter - Only if types available */}
+        <>
+          <Accordion defaultExpanded elevation={0} disableGutters sx={{ '&:before': { display: 'none' } }}>
+            <CustomAccordionSummary
+              sx={{ p: 0 }}
+              expandIcon={
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 24,
+                    height: 24,
+                  }}
+                >
+                  <AddIcon sx={{ display: 'block', '.Mui-expanded &': { display: 'none' } }} />
+                  <RemoveIcon sx={{ display: 'none', '.Mui-expanded &': { display: 'block' } }} />
+                </Box>
+              }
+            >
+              <Typography variant="subtitle2" fontWeight="bold">
+                {t('type')}
+              </Typography>
+            </CustomAccordionSummary>
+            <AccordionDetails>
+              {availableTypes.map((type) => (
                 <FormControlLabel
-                  key={key}
+                  key={type}
                   control={
-                    <Radio
-                      checked={localFilters.categories?.includes(key) || false}
-                      onChange={() => handleCategoryClick(key)}
+                    <Checkbox
+                      checked={localFilters.types?.includes(type) || false}
                       size="small"
+                      onChange={() => handleTypeToggle(type)}
                       sx={{
                         color: 'text.secondary',
                         '&.Mui-checked': { color: 'var(--active-color)' },
@@ -585,72 +672,16 @@ const FilterSidebar = forwardRef(({ currentFilters, onApplyFilters }, ref) => {
                   }
                   label={
                     <Typography variant="body1" sx={{ mt: '1px' }}>
-                      {tCats.has(key) ? tCats(key) : val.label || key}
+                      {tCats.has(type) ? tCats(type) : type}
                     </Typography>
                   }
                   sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', mb: 1 }}
                 />
-              ))
-            )}
-          </AccordionDetails>
-        </Accordion>
-
-        <Divider sx={{ my: 1 }} />
-
-        {/* Type Filter - Only if types available */}
-        {availableTypes.length > 0 && (
-          <>
-            <Accordion defaultExpanded elevation={0} disableGutters sx={{ '&:before': { display: 'none' } }}>
-              <CustomAccordionSummary
-                sx={{ p: 0 }}
-                expandIcon={
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 24,
-                      height: 24,
-                    }}
-                  >
-                    <AddIcon sx={{ display: 'block', '.Mui-expanded &': { display: 'none' } }} />
-                    <RemoveIcon sx={{ display: 'none', '.Mui-expanded &': { display: 'block' } }} />
-                  </Box>
-                }
-              >
-                <Typography variant="subtitle2" fontWeight="bold">
-                  {t('type')}
-                </Typography>
-              </CustomAccordionSummary>
-              <AccordionDetails>
-                {availableTypes.map((type) => (
-                  <FormControlLabel
-                    key={type}
-                    control={
-                      <Checkbox
-                        checked={localFilters.types?.includes(type) || false}
-                        size="small"
-                        onChange={() => handleTypeToggle(type)}
-                        sx={{
-                          color: 'text.secondary',
-                          '&.Mui-checked': { color: 'var(--active-color)' },
-                          py: 0.5,
-                        }}
-                      />
-                    }
-                    label={
-                      <Typography variant="body1" sx={{ mt: '1px' }}>
-                        {tCats.has(type) ? tCats(type) : type}
-                      </Typography>
-                    }
-                    sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', mb: 1 }}
-                  />
-                ))}
-              </AccordionDetails>
-            </Accordion>
-            <Divider sx={{ my: 1 }} />
-          </>
-        )}
+              ))}
+            </AccordionDetails>
+          </Accordion>
+          <Divider sx={{ my: 1 }} />
+        </>
 
         {/* Brands Autocomplete */}
         <Box sx={{ mb: 2, mt: 2 }} ref={brandRef}>

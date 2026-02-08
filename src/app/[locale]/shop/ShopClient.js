@@ -189,7 +189,6 @@ export default function ShopClient({ initialProducts, searchParams, pagination }
     }
 
     router.push(`/shop?${params.toString()}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const hasParams = Object.keys(searchParams || {}).some((k) => !['locale'].includes(k));

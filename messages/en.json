@@ -178,6 +178,8 @@
     "only_stock_desc": "Show only products currently in stock",
     "apply_filters": "Apply Filters",
     "search_placeholder": "Search...",
-    "order": "Order"
+    "order": "Order",
+    "all": "All",
+    "options_count": "options ({count})"
   }
 }

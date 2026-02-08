@@ -178,6 +178,8 @@
     "only_stock_desc": "Ցուցադրել միայն առկա տեսականին",
     "apply_filters": "Կիրառել",
     "search_placeholder": "Որոնում...",
-    "order": "Պատվիրել"
+    "order": "Պատվիրել",
+    "all": "Բոլորը",
+    "options_count": "տարբերակներ ({count})"
   }
 }

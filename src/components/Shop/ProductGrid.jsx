@@ -1,46 +1,31 @@
 'use client';
 
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Box, Card, CardMedia, Typography, Button, Rating, IconButton, Menu, MenuItem } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useRouter } from '../../i18n/navigation';
 import { useTranslations } from 'next-intl';
+import { safeTranslate } from '../../i18n/utils';
 import { ShoppingBasketIcon } from '../ShoppingBasketIcon';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { CustomPagination } from '../CustomPagination';
 
 // Component for individual Product Card to handle local state (selected variant)
 // Wrapped in memo to prevent unnecessary re-renders when parent grid updates
 const ProductCard = memo(({ product, t, tCats }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sort = searchParams.get('sort');
   const [anchorEl, setAnchorEl] = useState(null);
 
-  // ... implementation ...
+  const trOption = (key) => safeTranslate(key, t);
+  const trType = (key) => safeTranslate(key, tCats);
 
-  // Helper to safely translate or return original
-  const safeTranslate = (key, translator) => {
-    if (!key) return '';
-    const lowerKey = key.toString().toLowerCase();
-    if (translator === t) {
-      return t.rich ? t(lowerKey) : t(lowerKey) === lowerKey ? key : t(lowerKey); // Rough check
-    }
-    return translator(key);
-  };
-
-  const trOption = (key) => {
-    if (!key) return '';
-    const lower = key.toLowerCase();
-    return t(lower);
-  };
-
-  const trType = (key) => {
-    if (!key) return '';
-    return tCats(key);
-  };
-
-  // 1. Determine the "Primary" Option to display (First defined option group)
-  const primaryOption = product.options && product.options.length > 0 ? product.options[0] : null;
+  // 1. Determine Options and Variants
+  // We use the full list of variants and options definitions to handle all possibilities (Size, Color, etc.)
+  const variants = product.variants || [];
+  const options = product.options || [];
 
   // State for the currently selected variant overrides
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -48,15 +33,27 @@ const ProductCard = memo(({ product, t, tCats }) => {
   // 2. Derived Display Values
   const displayName = product.name;
 
+  // Determine default variant based on sort order
+  const defaultVariant = useMemo(() => {
+    if (!variants || variants.length === 0) return {};
+    if (sort === 'price-asc') {
+      return variants.reduce(
+        (prev, curr) => ((curr.price || 0) < (prev.price || 0) ? curr : prev),
+        variants[0],
+      );
+    }
+    if (sort === 'price-desc') {
+      return variants.reduce(
+        (prev, curr) => ((curr.price || 0) > (prev.price || 0) ? curr : prev),
+        variants[0],
+      );
+    }
+    return variants[0];
+  }, [variants, sort]);
+
   // Image & Price & Discount Logic
-  // Fallback to defaults
-  const currentVariant =
-    selectedVariant ||
-    (product.variants &&
-      product.variants.find(
-        (v) => v.attributes && v.attributes[primaryOption?.name] === primaryOption?.values?.[0],
-      )) ||
-    {};
+  // Fallback to defaults. If no selection, use calculated default variant or empty object.
+  const currentVariant = selectedVariant || defaultVariant || {};
 
   const displayImage =
     selectedVariant?.image || currentVariant?.image || product.mainImage || 'https://placehold.co/400';
@@ -77,10 +74,6 @@ const ProductCard = memo(({ product, t, tCats }) => {
   const displayPrice = finalPrice; // The one shown in bold
   const originalPrice = basePrice; // The one crossed out
 
-  // Attribute Display
-  const defaultOptionValue = primaryOption?.values?.[0];
-  const currentOptionValue = selectedVariant?.attributes?.[primaryOption?.name] || defaultOptionValue;
-
   const handleOpenMenu = (event) => {
     event.stopPropagation();
     setAnchorEl(event.currentTarget);
@@ -91,13 +84,9 @@ const ProductCard = memo(({ product, t, tCats }) => {
     setAnchorEl(null);
   };
 
-  const handleSelectOption = (value) => {
-    if (!product.variants) return;
-    const uniqueVariant = product.variants.find(
-      (v) => v.attributes && v.attributes[primaryOption.name] === value,
-    );
-    if (uniqueVariant) {
-      setSelectedVariant(uniqueVariant);
+  const handleSelectVariant = (variant) => {
+    if (variant) {
+      setSelectedVariant(variant);
     }
     handleCloseMenu();
   };
@@ -111,30 +100,42 @@ const ProductCard = memo(({ product, t, tCats }) => {
     router.push(`/product/${product.id}${query}`);
   };
 
-  const hasOptions = primaryOption && primaryOption.values.length > 0;
-  const optionCount = primaryOption?.values?.length || 0;
+  const hasOptions = variants.length > 1;
 
   // Translation helpers implementation usage
   const translatedUnit = product.unit ? trOption(product.unit) : '';
 
-  // Logic to ONLY show size/unit if it truly represents a size.
-  // We check if:
-  // 1. primaryOption name is explicitly "size" (case insensitive)
-  // 2. OR if current option is NOT size (e.g. Color), does product have a static size?
-  const isVariationSize = primaryOption?.name && primaryOption.name.toLowerCase() === 'size';
+  // Button Label: "options (Count)"
+  const optionsLabel = t('options_count', { count: variants.length });
 
-  // Compute what to show next to Brand
+  // Helper to generate menu item label
+  const getVariantLabel = (variant) => {
+    if (!variant || !variant.attributes) return '';
+    return options
+      .map((opt) => {
+        const val = variant.attributes[opt.name];
+        if (!val) return null;
+        const name = trOption(opt.name);
+        // Requirement: "If option name is 'size' the value must also previewed with unit, else only value"
+        const isSize = opt.name.toLowerCase() === 'size';
+        const displayVal = isSize ? `${val}${translatedUnit}` : val;
+        // Requirement: "The menu items preview must show option name and option value"
+        return `${name}: ${displayVal}`;
+      })
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  // Logic to show size next to brand if available in current variant
+  // Find a 'size' attribute in the current variant
   let displaySizeAndUnit = '';
+  const sizeOption = options.find((o) => o.name.toLowerCase() === 'size');
+  const sizeKey = sizeOption?.name;
 
-  if (isVariationSize) {
-    // If the variation itself IS the size (e.g. 50ml, 100ml selection)
-    displaySizeAndUnit = currentOptionValue ? `${currentOptionValue}${translatedUnit}` : '';
-  } else {
-    // If variation is NOT size (e.g. Colors), ONLY show if product has static size/unit
-    // Do NOT show the color name here.
-    if (product.size || product.unit) {
-      displaySizeAndUnit = `${product.size || ''}${translatedUnit}`;
-    }
+  if (sizeKey && currentVariant.attributes?.[sizeKey]) {
+    displaySizeAndUnit = `${currentVariant.attributes[sizeKey]}${translatedUnit}`;
+  } else if (product.size || product.unit) {
+    displaySizeAndUnit = `${product.size || ''}${translatedUnit}`;
   }
 
   const displayType = product.type ? trType(product.type) : '';
@@ -264,7 +265,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
               display: 'flex',
               alignItems: 'center',
               cursor: 'pointer',
-              mb: 1.5,
+              mb: 1,
               width: '100%', // Full width
               color: 'text.secondary',
               fontSize: '0.8rem',
@@ -284,16 +285,11 @@ const ProductCard = memo(({ product, t, tCats }) => {
                 mr: 0.5,
               }}
             >
-              {trOption(primaryOption.name)} {optionCount > 1 ? `(${optionCount})` : ''} :{' '}
-              {/* If it's a size variation, we already have it in displaySizeAndUnit. 
-                  If it's NOT (e.g. Color), we must show the current value here because displaySizeAndUnit is empty/static. */}
-              {isVariationSize ? displaySizeAndUnit : currentOptionValue}
+              {optionsLabel}
             </Typography>
 
             {/* The Icon Part (Fixed) */}
-            {optionCount > 1 && (
-              <KeyboardArrowDownIcon fontSize="small" sx={{ fontSize: 16, flexShrink: 0 }} />
-            )}
+            <KeyboardArrowDownIcon fontSize="small" sx={{ fontSize: 16, flexShrink: 0 }} />
           </Box>
         )}
 
@@ -305,24 +301,24 @@ const ProductCard = memo(({ product, t, tCats }) => {
           onClick={(e) => e.stopPropagation()}
           slotProps={{
             paper: {
-              sx: { minWidth: anchorEl ? anchorEl.clientWidth : undefined },
+              sx: { minWidth: anchorEl ? anchorEl.clientWidth : undefined, maxHeight: 300 },
             },
           }}
         >
-          {primaryOption?.values.map((val) => (
+          {variants.map((variant) => (
             <MenuItem
-              key={val}
-              selected={val === currentOptionValue}
-              onClick={() => handleSelectOption(val)}
+              key={variant.id}
+              selected={variant.id === currentVariant.id}
+              onClick={() => handleSelectVariant(variant)}
               dense
             >
-              {val} {translatedUnit}
+              <Typography variant="body2">{getVariantLabel(variant)}</Typography>
             </MenuItem>
           ))}
         </Menu>
 
         {/* Price - Requirement: "Must have most flex grow" */}
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 1 }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-end',  flexWrap: 'wrap', gap: 1 }}>
           <Typography
             variant="subtitle1"
             fontWeight="bold"
@@ -341,7 +337,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
         </Box>
 
         {/* Rating */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb:'5px' }}>
           <Rating
             value={Number(product.rating) || 0}
             precision={0.5}
