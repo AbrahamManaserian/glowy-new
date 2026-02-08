@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Navbar from '../../components/Navbar';
+import CartDrawer from '../../components/CartDrawer';
 import CategoriesBar from '../../components/CategoriesBar';
 import { Typography } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
@@ -48,6 +49,7 @@ function InnerLayout({ children, locale }) {
     <>
       {navLoader}
       <Navbar locale={locale} />
+      <CartDrawer />
       <CategoriesBar />
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>{children}</div>
     </>

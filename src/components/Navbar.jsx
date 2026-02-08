@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import AppBar from '@mui/material/AppBar';
+import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
@@ -45,6 +46,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCategories } from '../context/CategoriesContext';
 import { useUI } from '../context/UIContext';
+import { useShop } from '../context/ShopContext';
 import {
   AccessoriesIcon,
   BathBodyIcon,
@@ -225,7 +227,8 @@ function Navbar({ locale }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { categories } = useCategories();
-  const { activeMobileMenu, toggleMenu, closeMobileMenus } = useUI();
+  const { activeMobileMenu, toggleMenu, closeMobileMenus, toggleCart, isCartOpen } = useUI();
+  const { getCartCount } = useShop();
 
   const mobileOpen = activeMobileMenu === 'nav';
   const mobileUserMenuOpen = activeMobileMenu === 'user';
@@ -277,7 +280,8 @@ function Navbar({ locale }) {
     }
   };
 
-  const handleDrawerToggle = () => {
+  const handleDrawerToggle = (event) => {
+    event?.stopPropagation();
     toggleMenu('nav');
   };
 
@@ -288,12 +292,19 @@ function Navbar({ locale }) {
   };
 
   const handleOpenUserMenu = (event) => {
+    event?.stopPropagation();
     if (isMobile) {
       toggleMenu('user');
     } else {
+      closeMobileMenus(); // Ensure other drawers (like cart) are closed
       setAnchorElUser(event.currentTarget);
       setLangOpen(false);
     }
+  };
+
+  const handleCartToggle = (event) => {
+    event?.stopPropagation();
+    toggleCart();
   };
 
   const handleCloseUserMenu = () => {
@@ -482,6 +493,7 @@ function Navbar({ locale }) {
       position="sticky"
       color="inherit"
       elevation={0}
+      onClick={() => closeMobileMenus()}
       sx={{
         bgcolor: 'background.paper',
         boxShadow: (theme) =>
@@ -558,6 +570,7 @@ function Navbar({ locale }) {
               <Button
                 key={item}
                 component={Link}
+                onClick={handleLinkClick}
                 href={path}
                 sx={{
                   my: 2,
@@ -581,8 +594,10 @@ function Navbar({ locale }) {
 
         {/* Actions (User Menu + Basket) */}
         <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton sx={{ ml: 1 }} component={Link} href="/cart">
-            <ShoppingBasketIcon color="#000" size="24" />
+          <IconButton sx={{ ml: 1 }} onClick={handleCartToggle}>
+            <Badge badgeContent={getCartCount()} color="error">
+              <ShoppingBasketIcon color="#000" size="24" />
+            </Badge>
           </IconButton>
           <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
             <Avatar

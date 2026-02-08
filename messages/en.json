@@ -180,6 +180,12 @@
     "search_placeholder": "Search...",
     "order": "Order",
     "all": "All",
-    "options_count": "options ({count})"
+    "options_count": "options ({count})",
+    "cart_title": "Shopping Cart",
+    "cart_empty": "Your cart is empty",
+    "subtotal": "Subtotal",
+    "checkout": "Checkout",
+    "continue_shopping": "Continue Shopping",
+    "view_cart": "View Cart"
   }
 }

@@ -6,6 +6,7 @@ import theme from '../../theme';
 import { AuthContextProvider } from '../../context/AuthContext';
 import { CategoriesProvider } from '../../context/CategoriesContext';
 import { UIProvider } from '../../context/UIContext';
+import { ShopProvider } from '../../context/ShopContext';
 import '../globals.css';
 import LayoutContent from './LayoutContent';
 
@@ -30,7 +31,9 @@ export default async function CreateLayout({ children, params }) {
               <AuthContextProvider>
                 <CategoriesProvider>
                   <UIProvider>
-                    <LayoutContent locale={locale}>{children}</LayoutContent>
+                    <ShopProvider>
+                      <LayoutContent locale={locale}>{children}</LayoutContent>
+                    </ShopProvider>
                   </UIProvider>
                 </CategoriesProvider>
               </AuthContextProvider>

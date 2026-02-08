@@ -180,6 +180,12 @@
     "search_placeholder": "Որոնում...",
     "order": "Պատվիրել",
     "all": "Բոլորը",
-    "options_count": "տարբերակներ ({count})"
+    "options_count": "տարբերակներ ({count})",
+    "cart_title": "Զամբյուղ",
+    "cart_empty": "Զամբյուղը դատարկ է",
+    "subtotal": "Ընդամենը",
+    "checkout": "Ձեւակերպել",
+    "continue_shopping": "Շարունակել գնումները",
+    "view_cart": "Դիտել զամբյուղը"
   }
 }

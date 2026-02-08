@@ -43,6 +43,10 @@ export default function ShopClient({ initialProducts, searchParams, pagination }
 
   const mobileOpen = activeMobileMenu === 'filter';
 
+  const handleDrawerToggle = () => {
+    toggleMenu('filter');
+  };
+
   // Parse params helper
   const getParam = (key) => searchParams?.[key];
   const getAllParams = (key) => {
@@ -86,10 +90,6 @@ export default function ShopClient({ initialProducts, searchParams, pagination }
     });
     setSortBy(getParam('sort') || 'default');
   }, [searchParams]);
-
-  const handleDrawerToggle = () => {
-    toggleMenu('filter');
-  };
 
   const handleSortChange = (event) => {
     const value = event.target.value;

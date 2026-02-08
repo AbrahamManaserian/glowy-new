@@ -180,6 +180,12 @@
     "search_placeholder": "Поиск...",
     "order": "Заказать",
     "all": "Все",
-    "options_count": "варианты ({count})"
+    "options_count": "варианты ({count})",
+    "cart_title": "Корзина",
+    "cart_empty": "Ваша корзина пуста",
+    "subtotal": "Итого",
+    "checkout": "Оформить заказ",
+    "continue_shopping": "Продолжить покупки",
+    "view_cart": "В корзину"
   }
 }

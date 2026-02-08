@@ -2,11 +2,24 @@
 
 import React, { useState, memo, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Box, Card, CardMedia, Typography, Button, Rating, IconButton, Menu, MenuItem } from '@mui/material';
+import {
+  Box,
+  Card,
+  CardMedia,
+  Typography,
+  Button,
+  Rating,
+  IconButton,
+  Menu,
+  MenuItem,
+  Badge,
+} from '@mui/material';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import Grid from '@mui/material/Grid';
 import { useRouter } from '../../i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { safeTranslate } from '../../i18n/utils';
+import { useShop } from '../../context/ShopContext';
 import { ShoppingBasketIcon } from '../ShoppingBasketIcon';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -21,6 +34,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
 
   const trOption = (key) => safeTranslate(key, t);
   const trType = (key) => safeTranslate(key, tCats);
+  const { addToCart, addToWishlist, isInWishlist, cart } = useShop();
 
   // 1. Determine Options and Variants
   // We use the full list of variants and options definitions to handle all possibilities (Size, Color, etc.)
@@ -97,8 +111,10 @@ const ProductCard = memo(({ product, t, tCats }) => {
     // If not, use the implicit default variant (currentVariant) to ensure consistent state.
     const targetId = selectedVariant?.id || currentVariant?.id;
     const query = targetId ? `?variant=${targetId}` : '';
-    router.push(`/product/${product.id}${query}`);
-  };
+    // Use slug for cleaner URLs, fallback to ID
+    const urlSlug = product.slug || product.id;
+    router.push(`/product/${urlSlug}${query}`);
+  };;
 
   const hasOptions = variants.length > 1;
 
@@ -106,6 +122,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
   const translatedUnit = product.unit ? trOption(product.unit) : '';
 
   // Button Label: "options (Count)"
+
   const optionsLabel = t('options_count', { count: variants.length });
 
   // Helper to generate menu item label
@@ -139,6 +156,11 @@ const ProductCard = memo(({ product, t, tCats }) => {
   }
 
   const displayType = product.type ? trType(product.type) : '';
+
+  const cartItem = cart.find(
+    (item) => item.productId === product.id && item.variantId === (currentVariant.id || 'default'),
+  );
+  const qtyInCart = cartItem ? cartItem.quantity : 0;
 
   return (
     <Card
@@ -318,7 +340,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
         </Menu>
 
         {/* Price - Requirement: "Must have most flex grow" */}
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-end',  flexWrap: 'wrap', gap: 1 }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 1 }}>
           <Typography
             variant="subtitle1"
             fontWeight="bold"
@@ -337,7 +359,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
         </Box>
 
         {/* Rating */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb:'5px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: '5px' }}>
           <Rating
             value={Number(product.rating) || 0}
             precision={0.5}
@@ -357,6 +379,8 @@ const ProductCard = memo(({ product, t, tCats }) => {
       <Box sx={{ display: 'flex', gap: { xs: 0.5, md: 1 }, width: '100%', mt: 'auto' }}>
         <IconButton
           size="small"
+          onClick={() => addToCart(product, currentVariant)}
+          disabled={currentVariant.stock <= 0}
           sx={{
             border: '1px solid',
             borderColor: 'divider',
@@ -365,12 +389,29 @@ const ProductCard = memo(({ product, t, tCats }) => {
             width: { xs: 32, md: 40 },
             height: { xs: 32, md: 40 },
             flexShrink: 0,
+            '&:hover': { bgcolor: 'action.hover' },
+            opacity: currentVariant.stock <= 0 ? 0.5 : 1,
           }}
         >
-          <ShoppingBasketIcon size={18} />
+          <Badge
+            badgeContent={qtyInCart}
+            sx={{
+              '& .MuiBadge-badge': {
+                bgcolor: '#f44336', // Global active color
+                color: 'white',
+                fontSize: '0.65rem',
+                minWidth: '16px',
+                height: '16px',
+                padding: '0 4px',
+              },
+            }}
+          >
+            <ShoppingBasketIcon size={18} />
+          </Badge>
         </IconButton>
         <IconButton
           size="small"
+          onClick={() => addToWishlist(product)}
           sx={{
             border: '1px solid',
             borderColor: 'divider',
@@ -378,9 +419,14 @@ const ProductCard = memo(({ product, t, tCats }) => {
             width: { xs: 32, md: 40 },
             height: { xs: 32, md: 40 },
             flexShrink: 0,
+            color: isInWishlist(product.id) ? 'error.main' : 'inherit',
           }}
         >
-          <FavoriteBorderIcon fontSize="small" color="inherit" sx={{ fontSize: { xs: 18, md: 20 } }} />
+          {isInWishlist(product.id) ? (
+            <FavoriteIcon fontSize="small" sx={{ fontSize: { xs: 18, md: 20 }, fill: 'currentColor' }} />
+          ) : (
+            <FavoriteBorderIcon fontSize="small" color="inherit" sx={{ fontSize: { xs: 18, md: 20 } }} />
+          )}
         </IconButton>
         <Button
           variant="contained"
