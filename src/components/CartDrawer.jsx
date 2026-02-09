@@ -250,10 +250,18 @@ export default function CartDrawer() {
             '&:hover': { bgcolor: 'black' },
           }}
           onClick={handleCheckout}
+          disabled={cart.length === 0}
         >
           {t('checkout')}
         </Button>
-        <Button variant="outlined" fullWidth size="large" color="inherit" onClick={handleViewCart}>
+        <Button
+          variant="outlined"
+          fullWidth
+          size="large"
+          color="inherit"
+          onClick={handleViewCart}
+          disabled={cart.length === 0}
+        >
           {t('view_cart')}
         </Button>
       </Box>

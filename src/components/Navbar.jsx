@@ -336,7 +336,10 @@ function Navbar({ locale }) {
 
   // Content for Navigation Drawer
   const drawer = (
-    <Box sx={{ width: '100%', maxWidth: '100%', bgcolor: 'background.paper' }}>
+    <Box
+      onClick={(e) => e.stopPropagation()}
+      sx={{ width: '100%', maxWidth: '100%', bgcolor: 'background.paper' }}
+    >
       <List component="nav" aria-labelledby="nested-list-subheader">
         <ListItemText
           primary={tCommon('general') || 'General'}
@@ -419,7 +422,7 @@ function Navbar({ locale }) {
 
   // Content for User Menu (Shared)
   const renderUserMenuContent = () => (
-    <Box sx={{ width: '100%', maxWidth: isMobile ? '100%' : 250 }}>
+    <Box onClick={(e) => e.stopPropagation()} sx={{ width: '100%', maxWidth: isMobile ? '100%' : 250 }}>
       <Box sx={{ px: 2, py: 1.5 }}>
         <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold' }}>
           {user ? t('welcome', { name: user.displayName || user.email }) : t('welcome_guest')}
