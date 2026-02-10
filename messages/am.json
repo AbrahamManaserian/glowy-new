@@ -222,5 +222,32 @@
     "checkout": "Ձեւակերպել",
     "continue_shopping": "Շարունակել գնումները",
     "view_cart": "Դիտել զամբյուղը"
+  },
+  "Checkout": {
+    "title": "Վճարում",
+    "no_items_selected": "Զամբյուղում ապրանքներ ընտրված չեն:",
+    "back_to_cart": "Վերադառնալ զամբյուղ",
+    "shipping_address": "Առաքման հասցե",
+    "shipping_method": "Առաքման եղանակ",
+    "shipping_standard": "Ստանդարտ",
+    "shipping_standard_desc": "Առաքումը՝ 1-3 օրում: Ուշացման դեպքում կստանաք 400 ֏ բոնուս:",
+    "shipping_express": "Էքսպրես",
+    "shipping_express_desc": "Առաքումը՝ 1 օրում: Ուշացման դեպքում կստանաք 3000 ֏ բոնուս:",
+    "payment_method": "Վճարման եղանակ",
+    "payment_card": "Բանկային քարտով",
+    "payment_cash": "Կանխիկ առաքման պահին",
+    "review_items": "Պատվերի ամփոփում",
+    "place_order": "Հաստատել պատվերը",
+    "save_info": "Հիշել տվյալները հաջորդ անգամվա համար",
+    "item_variant_quantity": "Լռելյայն / {quantity} հատ",
+    "labels": {
+      "firstName": "Անուն",
+      "lastName": "Ազգանուն",
+      "address": "Հասցե",
+      "city": "Քաղաք",
+      "phone": "Հեռախոսահամար",
+      "email": "Էլ. փոստ",
+      "note": "Նշումներ"
+    }
   }
 }

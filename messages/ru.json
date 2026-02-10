@@ -222,5 +222,32 @@
     "checkout": "Оформить заказ",
     "continue_shopping": "Продолжить покупки",
     "view_cart": "В корзину"
+  },
+  "Checkout": {
+    "title": "Оформление заказа",
+    "no_items_selected": "Нет выбранных товаров для оформления.",
+    "back_to_cart": "Назад в корзину",
+    "shipping_address": "Адрес доставки",
+    "shipping_method": "Способ доставки",
+    "shipping_standard": "Стандартная",
+    "shipping_standard_desc": "Доставка за 1-3 дня. При задержке вы получите бонус 400 ֏.",
+    "shipping_express": "Экспресс",
+    "shipping_express_desc": "Доставка за 1 день. При задержке вы получите бонус 3000 ֏.",
+    "payment_method": "Способ оплаты",
+    "payment_card": "Банковской картой",
+    "payment_cash": "Наличными при получении",
+    "review_items": "Товары в заказе",
+    "place_order": "Оформить заказ",
+    "save_info": "Сохранить данные для следующего раза",
+    "item_variant_quantity": "По умолчанию / {quantity} шт",
+    "labels": {
+      "firstName": "Имя",
+      "lastName": "Фамилия",
+      "address": "Адрес",
+      "city": "Город",
+      "phone": "Номер телефона",
+      "email": "Email",
+      "note": "Примечание"
+    }
   }
 }

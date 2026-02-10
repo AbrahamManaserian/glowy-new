@@ -222,5 +222,32 @@
     "checkout": "Checkout",
     "continue_shopping": "Continue Shopping",
     "view_cart": "View Cart"
+  },
+  "Checkout": {
+    "title": "Checkout",
+    "no_items_selected": "No items selected for checkout.",
+    "back_to_cart": "Back to Cart",
+    "shipping_address": "Shipping Address",
+    "shipping_method": "Shipping Method",
+    "shipping_standard": "Standard",
+    "shipping_standard_desc": "Delivery in 1-3 days. Late delivery guarantee: 400 ֏ bonus.",
+    "shipping_express": "Express",
+    "shipping_express_desc": "Next-day delivery. Late delivery guarantee: 3000 ֏ bonus.",
+    "payment_method": "Payment Method",
+    "payment_card": "Credit Card",
+    "payment_cash": "Cash on Delivery",
+    "review_items": "Review Items",
+    "place_order": "Place Order",
+    "save_info": "Save this information for next time",
+    "item_variant_quantity": "Default / {quantity} pcs",
+    "labels": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "address": "Address",
+      "city": "City",
+      "phone": "Phone Number",
+      "email": "Email",
+      "note": "Note"
+    }
   }
 }

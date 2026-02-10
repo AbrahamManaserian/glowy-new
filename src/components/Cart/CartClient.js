@@ -22,6 +22,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useShop } from '../../context/ShopContext';
 import { useAuth } from '../../context/AuthContext';
+import { useCartCalculations } from '../../hooks/useCartCalculations';
 import { useRouter } from '../../i18n/navigation';
 import { validateCartItems } from '../../services/cartService';
 import { useTranslations } from 'next-intl';
@@ -145,86 +146,31 @@ export default function CartClient() {
   // 3. User & Not First Shop: Standard
   // 4. User & Not Verified: "Verify email"
 
-  const isFirstShop = user?.firstShop === true;
-  const isGuest = !user;
-  const isVerified = user?.emailVerified;
-  const FIRST_SHOP_DISCOUNT_PERCENT = 20;
-  const EXTRA_DISCOUNT_THRESHOLD = 20000;
-  const TARGET_DISCOUNT_PERCENT = 10;
-
-  // 1. Calculate Pure Subtotal (Original Prices)
-  const subtotal = cart.reduce((acc, item) => {
-    const key = `${item.productId}_${item.variantId}`;
-    if (!selectedItems.includes(key)) return acc;
-    return acc + (item.price || 0) * item.quantity;
-  }, 0);
-
-  // 2. Check Logic for Discounts
-  // isFirstShopEligible: User is verified and it's their first shop
-  // If First Shop eligible: Apply 20% discount ONLY. No other extra discounts.
-  // Else: Apply Threshold 10% logic if > 20000.
-
-  const isFirstShopEligible = isFirstShop && isVerified;
-
-  // Logic Setup
-  const isThresholdMet = !isFirstShopEligible && subtotal >= EXTRA_DISCOUNT_THRESHOLD;
-  const remainingForExtraDiscount = !isFirstShopEligible
-    ? Math.max(0, EXTRA_DISCOUNT_THRESHOLD - subtotal)
-    : 0;
-
-  // 3. Calculate Savings
-  let totalProductMarkdown = 0;
-  let totalExtraDiscount = 0;
-  let firstShopDiscountAmount = 0;
-
-  cart.forEach((item) => {
-    const key = `${item.productId}_${item.variantId}`;
-    if (!selectedItems.includes(key)) return;
-
-    const originalPrice = item.price || 0;
-    const existingDiscountPercent = item.discount || 0;
-
-    // A. Regular Markdown (Product specific)
-    // Discount amount per unit = Price * (Percent / 100)
-    // IMPORTANT: Does First Shop apply on TOP of markdown or on original price?
-    // "give user only 20% first shop disacount" implies exclusive or overriding.
-    // However, usually specific product markdowns stay.
-    // Let's assume Product Markdown applies, THEN First Shop applies on the reduced price OR original?
-    // Standard e-commerce: Product Discount First, Then Order Level Discount.
-
-    // BUT User said: "if product has 15% disacount we mustnt apply also extra 10% disacount" (for the threshold logic).
-    // For First Shop, typically it's a flat 20% off the *Order Total* (or subtotal).
-
-    const markdownPerUnit = Math.round(originalPrice * (existingDiscountPercent / 100));
-    totalProductMarkdown += markdownPerUnit * item.quantity;
-
-    // B. Extra Discount Logic
-    if (isFirstShopEligible) {
-      // Fill to 20% Logic
-      const targetFirstShopAmount = Math.round(originalPrice * (FIRST_SHOP_DISCOUNT_PERCENT / 100));
-      const gap = Math.max(0, targetFirstShopAmount - markdownPerUnit);
-      firstShopDiscountAmount += gap * item.quantity;
-    } else if (isThresholdMet) {
-      // Threshold 10% Logic (Fill up)
-      const discountGap = Math.max(0, TARGET_DISCOUNT_PERCENT - existingDiscountPercent);
-      if (discountGap > 0) {
-        const extraDiscountPerUnit = Math.round(originalPrice * (discountGap / 100));
-        totalExtraDiscount += extraDiscountPerUnit * item.quantity;
-      }
-    }
-  });
-
-  // 4. Shipping Logic
-  const payableBeforeShipping =
-    subtotal - totalProductMarkdown - totalExtraDiscount - firstShopDiscountAmount;
-
-  const FREE_SHIPPING_THRESHOLD = 5000;
-  const SHIPPING_COST = payableBeforeShipping > FREE_SHIPPING_THRESHOLD ? 0 : 1000;
-
-  const shippingSavings = payableBeforeShipping > FREE_SHIPPING_THRESHOLD ? 1000 : 0;
-
-  const total = payableBeforeShipping + SHIPPING_COST;
-  const totalSavings = totalProductMarkdown + totalExtraDiscount + firstShopDiscountAmount + shippingSavings;
+  const {
+    subtotal,
+    breakdown: {
+      productMarkdown: totalProductMarkdown,
+      extraDiscount: totalExtraDiscount,
+      firstShopDiscount: firstShopDiscountAmount,
+      shippingSavings,
+    },
+    shippingCost: SHIPPING_COST,
+    total,
+    totalSavings,
+    payableBeforeShipping,
+    meta: {
+      isFirstShopEligible,
+      remainingForExtraDiscount,
+      isGuest,
+      isVerified,
+      thresholds: {
+        targetDiscountPercent: TARGET_DISCOUNT_PERCENT,
+        extraDiscount: EXTRA_DISCOUNT_THRESHOLD,
+        freeShipping: FREE_SHIPPING_THRESHOLD,
+      },
+    },
+    itemCalculations,
+  } = useCartCalculations(cart, user, selectedItems);
 
   // Handlers
   const handleToggleSelect = (id) => {
@@ -235,8 +181,6 @@ export default function CartClient() {
     const selectedParams = selectedItems.join(',');
     router.push(`/checkout?items=${selectedParams}`);
   };
-
-  const hasOutOfStock = cart.some((item) => item.inStock === false);
 
   if (cart.length === 0 && !loading) {
     return (
@@ -484,47 +428,20 @@ export default function CartClient() {
 
       <Grid container spacing={4}>
         {/* Left Col: Items */}
-        <Grid size={{ xs: 12, md: 12, md: 8 }}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {cart.map((item) => {
               const isActive = item.inStock === true;
-              const originalPrice = item.price || 0;
-              const existingDiscountPercent = item.discount || 0;
-
-              // Calculate specific pricing for this item
-              const markdownPerUnit = Math.round(originalPrice * (existingDiscountPercent / 100));
-              const markdownAmount = markdownPerUnit * item.quantity;
-
-              const priceAfterMarkdown = originalPrice - markdownPerUnit;
-
-              // Extra Discount Calculation for Display
-              let itemExtraDiscount = 0;
-              let extraPercentApplied = 0;
-              let itemFirstShopDiscount = 0;
-
-              if (isFirstShopEligible) {
-                // First Shop Logic (Fill to 20%)
-                // Target: 20% off Original Price
-                // If Existing Markdown < 20%, Fill the gap
-                const targetFirstShopAmount = Math.round(originalPrice * (FIRST_SHOP_DISCOUNT_PERCENT / 100));
-                const gap = Math.max(0, targetFirstShopAmount - markdownPerUnit);
-                itemFirstShopDiscount = gap * item.quantity;
-              } else if (isThresholdMet) {
-                const discountGap = Math.max(0, TARGET_DISCOUNT_PERCENT - existingDiscountPercent);
-                if (discountGap > 0) {
-                  extraPercentApplied = discountGap;
-                  itemExtraDiscount = Math.round(originalPrice * (discountGap / 100)) * item.quantity;
-                }
-              }
-
-              // Final Unit Price Display (Effective)
-              // (Original * Qty - MarkdownTotal - Extra - FirstShop) / Qty
-              const totalReductions = markdownAmount + itemExtraDiscount + itemFirstShopDiscount;
-              // Ensure we don't divide by zero or get weird decimals, although Math.round used above
-              const finalUnitPrice =
-                item.quantity > 0 ? (originalPrice * item.quantity - totalReductions) / item.quantity : 0;
-
               const key = `${item.productId}_${item.variantId}`;
+              const calc = itemCalculations[key] || {};
+
+              const originalPrice = calc.originalPrice || 0;
+              const existingDiscountPercent = calc.existingDiscountPercent || 0;
+              const markdownAmount = calc.markdownAmount || 0;
+              const itemExtraDiscount = calc.itemExtraDiscount || 0;
+              const itemFirstShopDiscount = calc.itemFirstShopDiscount || 0;
+              const finalUnitPrice = calc.finalUnitPrice || 0;
+              const extraPercentApplied = calc.extraPercentApplied || 0;
 
               return (
                 <Card
@@ -772,7 +689,7 @@ export default function CartClient() {
         </Grid>
 
         {/* Right Col: Summary */}
-        <Grid size={{ xs: 12, sm: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Box sx={{ position: { md: 'sticky' }, top: 75 }}>
             {' '}
             {/* Sticky container */}
@@ -938,7 +855,6 @@ export default function CartClient() {
                 size="medium"
                 sx={{ bgcolor: '#2D3436', '&:hover': { bgcolor: 'black' }, mb: 2 }}
                 onClick={handleCheckout}
-                // disabled={hasOutOfStock || (user && !isVerified)} // keeping user disabled logic if preferred, or standard
               >
                 {t('continue_btn')}
               </Button>
