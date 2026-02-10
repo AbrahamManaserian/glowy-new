@@ -11,7 +11,7 @@ import {
   signInWithPopup,
   updateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
 import { useRouter } from '../i18n/navigation';
 
@@ -98,8 +98,22 @@ export const AuthContextProvider = ({ children }) => {
     }
   };
 
+  const updateUserData = async (newData) => {
+    if (!user) return;
+    const userRef = doc(db, 'users', user.uid);
+    try {
+      await updateDoc(userRef, newData);
+      setUser((prev) => ({ ...prev, ...newData }));
+    } catch (error) {
+      console.error('Error updating user data', error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, signup, login, logout, googleSignIn, facebookSignIn, loading }}>
+    <AuthContext.Provider
+      value={{ user, signup, login, logout, googleSignIn, facebookSignIn, loading, updateUserData }}
+    >
       {children}
     </AuthContext.Provider>
   );

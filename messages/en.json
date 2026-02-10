@@ -16,7 +16,7 @@
     "help": "Help",
     "language": "Language",
     "welcome": "Welcome, {name}",
-    "welcome_guest": "Welcome, Guest"
+    "welcome_guest": "Hello, sign in"
   },
   "Cart": {
     "steps_cart": "Shopping Cart",

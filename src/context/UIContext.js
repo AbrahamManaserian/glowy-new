@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from 'react';
 
-const UIContext = createContext();
+export const UIContext = createContext();
 
 export function UIProvider({ children }) {
   // 'nav' | 'user' | 'filter' | 'cart' | null
@@ -25,8 +25,21 @@ export function UIProvider({ children }) {
     setActiveDrawer((prev) => (prev === 'cart' ? null : 'cart'));
   };
 
+  // Profile Avatar State Sharing (shared between Sidebar and ProfilePage)
+  const [pendingAvatar, setPendingAvatar] = useState({ file: null, preview: null });
+
   return (
-    <UIContext.Provider value={{ activeMobileMenu, toggleMenu, closeMobileMenus, isCartOpen, toggleCart }}>
+    <UIContext.Provider
+      value={{
+        activeMobileMenu,
+        toggleMenu,
+        closeMobileMenus,
+        isCartOpen,
+        toggleCart,
+        pendingAvatar,
+        setPendingAvatar,
+      }}
+    >
       {children}
     </UIContext.Provider>
   );

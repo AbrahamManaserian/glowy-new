@@ -10,13 +10,13 @@
     "logout": "Выйти",
     "profile": "Профиль",
     "orders": "Мои заказы",
-    "wishlist": "Список желаний",
+    "wishlist": "Избранные",
     "settings": "Настройки",
     "payment": "Оплата",
     "help": "Помощь",
     "language": "Язык",
     "welcome": "Добро пожаловать, {name}",
-    "welcome_guest": "Добро пожаловать, Гость"
+    "welcome_guest": "Здравствуйте, войдите"
   },
   "Cart": {
     "steps_cart": "Корзина",

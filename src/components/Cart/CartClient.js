@@ -773,7 +773,7 @@ export default function CartClient() {
 
         {/* Right Col: Summary */}
         <Grid size={{ xs: 12, sm: 12, md: 4 }}>
-          <Box sx={{ position: { lg: 'sticky' }, top: 20 }}>
+          <Box sx={{ position: { md: 'sticky' }, top: 75 }}>
             {' '}
             {/* Sticky container */}
             <Card variant="outlined" sx={{ p: { xs: 1, sm: 3 }, borderRadius: 3 }}>

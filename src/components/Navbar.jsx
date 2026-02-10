@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { userMenuItems, adminMenuItems } from './UserMenuItems';
 import AppBar from '@mui/material/AppBar';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
@@ -404,28 +405,35 @@ function Navbar({ locale }) {
     </Box>
   );
 
-  const menuItems = [
-    { label: t('profile'), icon: <PersonOutlineIcon fontSize="small" />, link: '/profile' },
-    { label: t('orders'), icon: <ShoppingBagOutlinedIcon fontSize="small" />, link: '/orders' },
-    { label: t('wishlist'), icon: <FavoriteBorderIcon fontSize="small" />, link: '/wishlist' },
-    ...(user?.role === 'admin'
-      ? [{ label: 'Admin Panel', icon: <DashboardIcon fontSize="small" />, link: '/admin/dashboard' }]
-      : []),
-    ...(user
-      ? [
-          { label: t('settings'), icon: <SettingsOutlinedIcon fontSize="small" />, link: '/settings' },
-          { label: t('payment'), icon: <PaymentOutlinedIcon fontSize="small" />, link: '/payment' },
-        ]
-      : []),
-    { label: t('help'), icon: <HelpOutlineIcon fontSize="small" />, link: '/help' },
-  ];
+  const menuItems = user
+    ? [
+        ...userMenuItems.map((item) => ({
+          label: item.label, // You might want to map this to t(item.id) if existing keys match
+          icon: item.icon,
+          link: item.path,
+        })),
+        ...(user?.role === 'admin' && adminMenuItems
+          ? adminMenuItems.map((item) => ({
+              label: item.label,
+              icon: item.icon,
+              link: item.path,
+            }))
+          : []),
+        { label: t('help'), icon: <HelpOutlineIcon fontSize="small" />, link: '/help' },
+      ]
+    : [
+        { label: t('profile'), icon: <PersonOutlineIcon fontSize="small" />, link: '/user/profile' },
+        { label: t('orders'), icon: <ShoppingBagOutlinedIcon fontSize="small" />, link: '/user/orders' },
+        { label: t('wishlist'), icon: <FavoriteBorderIcon fontSize="small" />, link: '/user/wishlist' },
+        { label: t('help'), icon: <HelpOutlineIcon fontSize="small" />, link: '/help' },
+      ];
 
   // Content for User Menu (Shared)
   const renderUserMenuContent = () => (
     <Box onClick={(e) => e.stopPropagation()} sx={{ width: '100%', maxWidth: isMobile ? '100%' : 250 }}>
       <Box sx={{ px: 2, py: 1.5 }}>
         <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold' }}>
-          {user ? t('welcome', { name: user.displayName || user.email }) : t('welcome_guest')}
+          {user ? user.displayName || user.email : t('welcome_guest')}
         </Typography>
         {user && user.email && (
           <Typography variant="body2" color="text.secondary" noWrap>
