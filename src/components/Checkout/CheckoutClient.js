@@ -14,6 +14,8 @@ import {
   Card,
   Divider,
   Checkbox,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import { useShop } from '../../context/ShopContext';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +23,7 @@ import { useCartCalculations } from '../../hooks/useCartCalculations';
 import { useRouter } from '../../i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 // Steps Indicator
 const CheckoutSteps = ({ activeStep = 1 }) => {
@@ -89,11 +92,49 @@ export default function CheckoutClient() {
   const tCart = useTranslations('Cart');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { cart } = useShop();
-  const { user } = useAuth();
-
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const { cart, clearCart } = useShop();
+  const { user, updateUserData } = useAuth();
+  
   const [shippingMethod, setShippingMethod] = useState('standard');
+  const [paymentMethod, setPaymentMethod] = useState('cash'); // Default Cash
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [orderId, setOrderId] = useState(null);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    address: '',
+    phone: '',
+    email: '',
+    note: '',
+  });
+  const [saveInfo, setSaveInfo] = useState(true);
+
+  // Initialize form with user data
+  useEffect(() => {
+    if (user) {
+      const names = user.displayName ? user.displayName.split(' ') : ['', ''];
+      setFormData((prev) => ({
+        ...prev,
+        firstName: prev.firstName || names[0] || '',
+        lastName: prev.lastName || names.slice(1).join(' ') || '',
+        email: prev.email || user.email || '',
+        phone: prev.phone || user.phoneNumber || prev.phone || '',
+        address: prev.address || user.address || prev.address || '',
+        note: prev.note || '',
+      }));
+    }
+  }, [user]);
+
+  // Handle Input Change
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
 
   // Get items from URL
   const itemsParam = searchParams.get('items');
@@ -109,11 +150,109 @@ export default function CheckoutClient() {
 
   const { thresholds } = meta;
 
-  const handlePlaceOrder = () => {
-    // Todo: Implement order placement logic
-    // Navigate to success or handle payment
-    router.push('/checkout/success');
+  const handlePlaceOrder = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      // 1. Validate Inputs (Basic)
+      if (!formData.firstName || !formData.lastName || !formData.address || !formData.phone) {
+        throw new Error('Please fill in all required fields.');
+      }
+
+      // 2. Update User Data if Requested and Changed
+      if (user && saveInfo) {
+        const newData = {};
+        const newFullName = `${formData.firstName} ${formData.lastName}`.trim();
+
+        if (newFullName !== user.displayName) newData.displayName = newFullName;
+        if (formData.phone !== user.phoneNumber && formData.phone !== user.phone)
+          newData.phone = formData.phone;
+        if (formData.address !== user.address) newData.address = formData.address;
+
+        if (Object.keys(newData).length > 0) {
+          await updateUserData(newData);
+        }
+      }
+
+      // 3. Prepare Order Payload
+      const orderPayload = {
+        items: checkoutItems.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          price: item.price,
+          discount: item.discount,
+          name: item.name,
+        })),
+        shippingMethod,
+        paymentMethod,
+        deliveryAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address: formData.address,
+          phone: formData.phone,
+          email: formData.email,
+          note: formData.note,
+        },
+        userId: user?.uid,
+        userInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          email: formData.email || user?.email,
+        },
+      };
+
+      // 4. Send to API
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to place order');
+      }
+
+      // 5. Success      // Update local user state if first shop discount was used so it disappears from UI immediately
+      if (user && breakdown.firstShopDiscount > 0) {
+        await updateUserData({ firstShop: false });
+      }
+      setSuccess(true);
+      setOrderId(result.orderId);
+      clearCart();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+
+  if (success) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
+        <Box sx={{ mb: 4, color: '#4CAF50' }}>
+          <CheckCircleOutlineIcon sx={{ fontSize: 80 }} />
+        </Box>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          Order Placed Successfully!
+        </Typography>
+        <Typography variant="body1" color="text.secondary" paragraph>
+          Thank you for your order. Your order ID is <b>{orderId}</b>. We have sent a confirmation details to
+          your email.
+        </Typography>
+        <Button variant="contained" sx={{ mt: 2, bgcolor: 'black' }} onClick={() => router.push('/shop')}>
+          {tCart('continue_shopping_btn')}
+        </Button>
+      </Container>
+    );
+  }
 
   if (selectedKeys.length === 0) {
     // Handle empty state or redirect back to cart
@@ -137,7 +276,7 @@ export default function CheckoutClient() {
         <Grid size={{ xs: 12, md: 8 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {/* Delivery Address */}
-            <Card variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+            <Card variant="outlined" sx={{ p: { xs: 1, sm: 3 }, borderRadius: 2 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 {t('shipping_address')}
               </Typography>
@@ -147,7 +286,9 @@ export default function CheckoutClient() {
                     required
                     fullWidth
                     label={t('labels.firstName')}
-                    defaultValue={user?.displayName?.split(' ')[0] || ''}
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -164,7 +305,9 @@ export default function CheckoutClient() {
                     required
                     fullWidth
                     label={t('labels.lastName')}
-                    defaultValue={user?.displayName?.split(' ')[1] || ''}
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -181,6 +324,9 @@ export default function CheckoutClient() {
                     required
                     fullWidth
                     label={t('labels.address')}
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -196,6 +342,9 @@ export default function CheckoutClient() {
                   <TextField
                     required
                     fullWidth
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
                     label={t('labels.phone')}
                     variant="filled"
                     sx={{
@@ -211,6 +360,9 @@ export default function CheckoutClient() {
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     label={t('labels.email')}
                     variant="filled"
                     sx={{
@@ -227,6 +379,9 @@ export default function CheckoutClient() {
                   <TextField
                     fullWidth
                     multiline
+                    name="note"
+                    value={formData.note}
+                    onChange={handleInputChange}
                     minRows={2}
                     label={t('labels.note')}
                     variant="filled"
@@ -245,7 +400,8 @@ export default function CheckoutClient() {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      defaultChecked
+                      checked={saveInfo}
+                      onChange={(e) => setSaveInfo(e.target.checked)}
                       sx={{ color: '#E65100', '&.Mui-checked': { color: '#E65100' } }}
                     />
                   }
@@ -255,7 +411,7 @@ export default function CheckoutClient() {
             </Card>
 
             {/* Shipping Method */}
-            <Card variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+            <Card variant="outlined" sx={{ p: { xs: 1, sm: 3 }, borderRadius: 2 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 {t('shipping_method')}
               </Typography>
@@ -350,15 +506,16 @@ export default function CheckoutClient() {
             </Card>
 
             {/* Payment Method */}
-            <Card variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+            <Card variant="outlined" sx={{ p: { xs: 1, sm: 3 }, borderRadius: 2 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 {t('payment_method')}
               </Typography>
               <RadioGroup value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
                 <FormControlLabel
                   value="card"
+                  disabled
                   control={<Radio sx={{ color: '#E65100', '&.Mui-checked': { color: '#E65100' } }} />}
-                  label={t('payment_card')}
+                  label={`${t('payment_card')} (Coming Soon)`}
                 />
                 <FormControlLabel
                   value="cash"
@@ -367,14 +524,15 @@ export default function CheckoutClient() {
                 />
                 <FormControlLabel
                   value="idram"
+                  disabled
                   control={<Radio sx={{ color: '#E65100', '&.Mui-checked': { color: '#E65100' } }} />}
-                  label="Idram"
+                  label="Idram (Coming Soon)"
                 />
               </RadioGroup>
             </Card>
 
             {/* REVIEW ITEMS (Compact) */}
-            <Card variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+            <Card variant="outlined" sx={{ p: { xs: 1, sm: 3 }, borderRadius: 2 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 {t('review_items')}
               </Typography>
@@ -414,7 +572,7 @@ export default function CheckoutClient() {
         {/* Right Column: Summary */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Box sx={{ position: { md: 'sticky' }, top: 75 }}>
-            <Card variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+            <Card variant="outlined" sx={{ p: { xs: 1, sm: 3 }, borderRadius: 3 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 {tCart('summary_title', { count: checkoutItems.reduce((a, b) => a + b.quantity, 0) })}
               </Typography>
@@ -501,14 +659,21 @@ export default function CheckoutClient() {
                 </Typography>
               </Box>
 
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
               <Button
                 variant="contained"
                 fullWidth
                 size="medium"
+                disabled={loading}
                 sx={{ bgcolor: '#2D3436', '&:hover': { bgcolor: 'black' }, mb: 2 }}
                 onClick={handlePlaceOrder}
               >
-                {t('place_order')}
+                {loading ? <CircularProgress size={24} color="inherit" /> : t('place_order')}
               </Button>
               <Button
                 variant="contained"

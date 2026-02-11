@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Drawer, Typography, IconButton, Button, Divider, Avatar } from '@mui/material';
+import { Box, Drawer, Typography, IconButton, Button } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -17,18 +17,6 @@ export default function CartDrawer() {
   const { cart, removeFromCart, updateCartQuantity } = useShop();
   const router = useRouter();
   const t = useTranslations('Shop'); // Assumptions on translations
-
-  const totalAmount = cart.reduce((total, item) => {
-    const price = item.price || 0;
-    const discount = item.discount || 0;
-    const finalPrice = discount > 0 ? price * (1 - discount / 100) : price;
-    return total + finalPrice * item.quantity;
-  }, 0);
-
-  const handleCheckout = () => {
-    toggleCart();
-    router.push('/checkout');
-  };
 
   const handleViewCart = () => {
     toggleCart();
@@ -68,7 +56,7 @@ export default function CartDrawer() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          p: 2,
+          p: { xs: 1, sm: 2 },
           borderBottom: '1px solid',
           borderColor: 'divider',
           position: 'sticky',
@@ -86,7 +74,7 @@ export default function CartDrawer() {
       </Box>
 
       {/* Cart Items */}
-      <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto', p: { xs: 1, sm: 2 } }}>
         {cart.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <Typography variant="body1" color="text.secondary">
@@ -230,35 +218,16 @@ export default function CartDrawer() {
       </Box>
 
       {/* Footer */}
-      <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold">
-            {t('subtotal')}
-          </Typography>
-          <Typography variant="subtitle1" fontWeight="bold">
-            {Math.round(totalAmount).toLocaleString()} ֏
-          </Typography>
-        </Box>
+      <Box sx={{ p: 1, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Button
           variant="contained"
           fullWidth
           size="large"
           sx={{
-            mb: 1.5,
             bgcolor: '#2D3436',
             color: 'white',
             '&:hover': { bgcolor: 'black' },
           }}
-          onClick={handleCheckout}
-          disabled={cart.length === 0}
-        >
-          {t('checkout')}
-        </Button>
-        <Button
-          variant="outlined"
-          fullWidth
-          size="large"
-          color="inherit"
           onClick={handleViewCart}
           disabled={cart.length === 0}
         >

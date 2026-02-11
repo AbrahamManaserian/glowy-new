@@ -51,6 +51,7 @@
     "order_total": "Order Total",
     "bonus_hint": "By confirming this order, you will earn <bold>{amount} ֏ bonus (3%)</bold> that can be used for future orders.",
     "continue_btn": "Continue",
+    "checkout": "Checkout",
     "continue_shopping_btn": "Continue Shopping"
   },
   "Categories": {

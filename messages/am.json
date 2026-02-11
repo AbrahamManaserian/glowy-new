@@ -51,6 +51,7 @@
     "order_total": "Ընդհանուր",
     "bonus_hint": "Հաստատելով պատվերը, դուք կստանաք <bold>{amount} ֏ բոնուս (3%)</bold> հաջորդ գնումների համար:",
     "continue_btn": "Շարունակել",
+    "checkout": "Ձեւակերպել",
     "continue_shopping_btn": "Շարունակել գնումները"
   },
   "Categories": {

@@ -856,7 +856,7 @@ export default function CartClient() {
                 sx={{ bgcolor: '#2D3436', '&:hover': { bgcolor: 'black' }, mb: 2 }}
                 onClick={handleCheckout}
               >
-                {t('continue_btn')}
+                {t('checkout')}
               </Button>
 
               <Button

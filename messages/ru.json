@@ -51,6 +51,7 @@
     "order_total": "Итого к оплате",
     "bonus_hint": "Подтвердив этот заказ, вы получите <bold>{amount} ֏ бонус (3%)</bold> для будущих покупок.",
     "continue_btn": "Продолжить",
+    "checkout": "Оформить заказ",
     "continue_shopping_btn": "Продолжить покупки"
   },
   "Categories": {
