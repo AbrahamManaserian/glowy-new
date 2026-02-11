@@ -20,8 +20,10 @@ import { UIContext } from '../context/UIContext';
 import { userMenuItems } from './UserMenuItems';
 import { useState, useContext } from 'react';
 import { compressImage } from '../utils/imageUtils';
+import { useTranslations } from 'next-intl';
 
 export default function UserSidebar() {
+  const t = useTranslations('Navigation');
   // This line must match exactly up to the opening brace
   const pathname = usePathname();
   const router = useRouter();
@@ -135,7 +137,7 @@ export default function UserSidebar() {
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
+                <ListItemText primary={t(item.id)} />
               </ListItemButton>
             </ListItem>
           ))}
@@ -147,7 +149,7 @@ export default function UserSidebar() {
             <ListItemIcon sx={{ minWidth: 40 }}>
               <LogoutOutlined fontSize="small" />
             </ListItemIcon>
-            <ListItemText primary="Logout" />
+            <ListItemText primary={t('logout')} />
           </ListItemButton>
         </ListItem>
       </List>

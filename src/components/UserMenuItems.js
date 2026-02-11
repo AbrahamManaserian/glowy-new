@@ -32,7 +32,7 @@ export const userMenuItems = [
     label: 'Payments',
     path: '/user/payments',
     icon: <CreditCardOutlined fontSize="small" />,
-    id: 'payments',
+    id: 'payment',
     protected: true,
   },
   {

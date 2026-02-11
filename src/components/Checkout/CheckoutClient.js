@@ -90,11 +90,17 @@ const CheckoutSteps = ({ activeStep = 1 }) => {
 export default function CheckoutClient() {
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
+  const tVal = useTranslations('Validation');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cart, clearCart } = useShop();
+  // We can't use useShop's Alert here easily because CheckoutClient might not be child of ShopProvider in some architectures,
+  // but assuming it is. However, CheckoutClient handles its own errors via `error` state usually.
+  // Actually, let's use a simple local check or reuse the context if available.
+  // The context exposes `cart` which now has `maxStock`.
+
   const { user, updateUserData } = useAuth();
-  
+
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [paymentMethod, setPaymentMethod] = useState('cash'); // Default Cash
   const [loading, setLoading] = useState(false);
@@ -111,6 +117,7 @@ export default function CheckoutClient() {
     email: '',
     note: '',
   });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [saveInfo, setSaveInfo] = useState(true);
 
   // Initialize form with user data
@@ -122,19 +129,56 @@ export default function CheckoutClient() {
         firstName: prev.firstName || names[0] || '',
         lastName: prev.lastName || names.slice(1).join(' ') || '',
         email: prev.email || user.email || '',
-        phone: prev.phone || user.phone || prev.phone || '',
+        phone: prev.phone || user.phone || prev.phone || '+374', // Default country code if empty
         address: prev.address || user.address || prev.address || '',
         note: prev.note || '',
       }));
+    } else {
+      // Guest default
+      setFormData((prev) => ({ ...prev, phone: '+374' }));
     }
   }, [user]);
+
+  const validateForm = () => {
+    const errors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^(\+374|0)\d{8}$/; // Example: +37412345678 or 091234567
+
+    if (!formData.firstName.trim()) errors.firstName = tVal('firstName_required');
+    if (!formData.lastName.trim()) errors.lastName = tVal('lastName_required');
+    if (!formData.address.trim()) errors.address = tVal('address_required');
+
+    // Phone Validation
+    if (!formData.phone.trim()) {
+      errors.phone = tVal('phone_required');
+    } else if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+      errors.phone = tVal('phone_invalid');
+    }
+
+    // Email Validation (Optional if not required, but strict if provided)
+    if (formData.email && !emailRegex.test(formData.email)) {
+      errors.email = tVal('email_invalid');
+    }
+    // If email is required for Guests: REMOVED per requirement
+    /*
+    if (!user && !formData.email) {
+        errors.email = 'Email is required for guest checkout';
+    }
+    */
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Handle Input Change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
+    // Clear error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };;
 
   // Get items from URL
   const itemsParam = searchParams.get('items');
@@ -155,9 +199,33 @@ export default function CheckoutClient() {
     setError('');
 
     try {
-      // 1. Validate Inputs (Basic)
-      if (!formData.firstName || !formData.lastName || !formData.address || !formData.phone) {
-        throw new Error('Please fill in all required fields.');
+      // 0. Pre-validate Stock Logic
+      // Ensure that user couldn't place order more than in stock.
+      const stockErrors = [];
+      checkoutItems.forEach((item) => {
+        const limit = item.maxStock || 1000; // Fallback if missing
+        if (item.quantity > limit) {
+          stockErrors.push(
+            tVal('stock_validation_failed', {
+              productName: item.name,
+              requested: item.quantity,
+              available: limit,
+            }),
+          );
+        }
+      });
+
+      if (stockErrors.length > 0) {
+        setError(stockErrors.join('\n'));
+        setLoading(false);
+        return;
+      }
+
+      // 1. Validate Inputs (Modern)
+      if (!validateForm()) {
+        setError(tVal('fix_errors'));
+        setLoading(false);
+        return;
       }
 
       // 2. Update User Data if Requested and Changed
@@ -233,7 +301,6 @@ export default function CheckoutClient() {
     }
   };
 
-
   if (success) {
     return (
       <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
@@ -241,11 +308,13 @@ export default function CheckoutClient() {
           <CheckCircleOutlineIcon sx={{ fontSize: 80 }} />
         </Box>
         <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Order Placed Successfully!
+          {t('success_title')}
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Thank you for your order. Your order ID is <b>{orderId}</b>. We have sent a confirmation details to
-          your email.
+          {t.rich('success_msg', {
+            orderId: orderId,
+            b: (chunks) => <b>{chunks}</b>,
+          })}
         </Typography>
         <Button variant="contained" sx={{ mt: 2, bgcolor: 'black' }} onClick={() => router.push('/shop')}>
           {tCart('continue_shopping_btn')}
@@ -289,6 +358,8 @@ export default function CheckoutClient() {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
+                    error={!!fieldErrors.firstName}
+                    helperText={fieldErrors.firstName}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -308,6 +379,8 @@ export default function CheckoutClient() {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
+                    error={!!fieldErrors.lastName}
+                    helperText={fieldErrors.lastName}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -327,6 +400,8 @@ export default function CheckoutClient() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
+                    error={!!fieldErrors.address}
+                    helperText={fieldErrors.address}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -346,6 +421,8 @@ export default function CheckoutClient() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     label={t('labels.phone')}
+                    error={!!fieldErrors.phone}
+                    helperText={fieldErrors.phone}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -364,6 +441,8 @@ export default function CheckoutClient() {
                     value={formData.email}
                     onChange={handleInputChange}
                     label={t('labels.email')}
+                    error={!!fieldErrors.email}
+                    helperText={fieldErrors.email}
                     variant="filled"
                     sx={{
                       '& .MuiFilledInput-root': {
@@ -577,41 +656,61 @@ export default function CheckoutClient() {
                 {tCart('summary_title', { count: checkoutItems.reduce((a, b) => a + b.quantity, 0) })}
               </Typography>
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography color="text.secondary">{tCart('subtotal')}</Typography>
-                <Typography fontWeight="medium">{subtotal.toLocaleString()} ֏</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, gap: 2 }}>
+                <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
+                  {tCart('subtotal')}
+                </Typography>
+                <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
+                  {subtotal.toLocaleString()} ֏
+                </Typography>
               </Box>
 
               {breakdown.productMarkdown > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100' }}>
-                  <Typography>{tCart('product_markdown')}</Typography>
-                  <Typography fontWeight="medium">-{breakdown.productMarkdown.toLocaleString()} ֏</Typography>
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100', gap: 2 }}
+                >
+                  <Typography noWrap sx={{ flex: 1 }}>
+                    {tCart('product_markdown')}
+                  </Typography>
+                  <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
+                    -{breakdown.productMarkdown.toLocaleString()} ֏
+                  </Typography>
                 </Box>
               )}
 
               {breakdown.firstShopDiscount > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100' }}>
-                  <Typography>{tCart('first_shop_discount')}</Typography>
-                  <Typography fontWeight="medium">
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100', gap: 2 }}
+                >
+                  <Typography noWrap sx={{ flex: 1 }}>
+                    {tCart('first_shop_discount')}
+                  </Typography>
+                  <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
                     -{breakdown.firstShopDiscount.toLocaleString()} ֏
                   </Typography>
                 </Box>
               )}
 
               {breakdown.extraDiscount > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100' }}>
-                  <Typography>
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100', gap: 2 }}
+                >
+                  <Typography noWrap sx={{ flex: 1 }}>
                     {tCart('extra_discount', { percent: thresholds.targetDiscountPercent })}
                   </Typography>
-                  <Typography fontWeight="medium">-{breakdown.extraDiscount.toLocaleString()} ֏</Typography>
+                  <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
+                    -{breakdown.extraDiscount.toLocaleString()} ֏
+                  </Typography>
                 </Box>
               )}
 
               <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography color="text.secondary">{tCart('shipping')}</Typography>
-                <Typography fontWeight="medium">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, gap: 2 }}>
+                <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
+                  {tCart('shipping')}
+                </Typography>
+                <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
                   {shippingCost === 0 ? tCart('free') : `${shippingCost.toLocaleString()} ֏`}
                 </Typography>
               </Box>
@@ -627,20 +726,24 @@ export default function CheckoutClient() {
                     border: '1px dashed #E65100',
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', color: '#E65100' }}>
-                    <Typography fontWeight="bold">{tCart('total_savings')}</Typography>
-                    <Typography fontWeight="bold">{totalSavings.toLocaleString()} ֏</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', color: '#E65100', gap: 2 }}>
+                    <Typography fontWeight="bold" noWrap sx={{ flex: 1 }}>
+                      {tCart('total_savings')}
+                    </Typography>
+                    <Typography fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
+                      {totalSavings.toLocaleString()} ֏
+                    </Typography>
                   </Box>
                 </Box>
               )}
 
               <Divider sx={{ my: 2 }} />
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" fontWeight="bold">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, gap: 2 }}>
+                <Typography variant="h6" fontWeight="bold" noWrap sx={{ flex: 1 }}>
                   {tCart('order_total')}
                 </Typography>
-                <Typography variant="h6" fontWeight="bold">
+                <Typography variant="h6" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                   {total.toLocaleString()} ֏
                 </Typography>
               </Box>

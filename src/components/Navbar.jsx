@@ -408,7 +408,7 @@ function Navbar({ locale }) {
   const menuItems = user
     ? [
         ...userMenuItems.map((item) => ({
-          label: item.label, // You might want to map this to t(item.id) if existing keys match
+          label: t(item.id),
           icon: item.icon,
           link: item.path,
         })),

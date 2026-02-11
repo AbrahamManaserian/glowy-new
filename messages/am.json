@@ -250,5 +250,47 @@
       "email": "Էլ. փոստ",
       "note": "Նշումներ"
     }
+  },
+  "Validation": {
+    "fix_errors": "Խնդրում ենք ուղղել սխալները:",
+    "firstName_required": "Անունը պարտադիր է",
+    "lastName_required": "Ազգանունը պարտադիր է",
+    "address_required": "Հասցեն պարտադիր է",
+    "phone_required": "Հեռախոսահամարը պարտադիր է",
+    "phone_invalid": "Սխալ ձևաչափ (օրինակ՝ +37491234567)",
+    "email_invalid": "Սխալ էլ. հասցե",
+    "email_required_guest": "Հյուրի համար էլ. հասցեն պարտադիր է",
+    "stock_validation_failed": "Առկայության սխալ՝ {productName}: Պահանջվել է {requested}, առկա է՝ {available}:"
+  },
+  "ShopAlerts": {
+    "stock_limited": "Ներեցեք, պահեստում առկա է ընդամենը {count} հատ:",
+    "added_to_cart": "Ապրանքը ավելացված է զամբյուղ",
+    "cannot_add_more": "Ավելացնել հնարավոր չէ: Պահեստում առկա է ընդամենը {count} հատ:"
+  },
+  "Orders": {
+    "title": "Իմ պատվերները",
+    "tabs": {
+      "all": "Բոլորը",
+      "pending": "Սպասման մեջ",
+      "processing": "Մշակվում է",
+      "shipping": "Առաքվում է",
+      "delivered": "Առաքված",
+      "rejected": "Մերժված"
+    },
+    "no_orders": "Պատվերներ չեն գտնվել",
+    "go_to_shop": "Գնալ խանութ",
+    "order_number": "Պատվեր #",
+    "placed_on": "Ամսաթիվ",
+    "items_header": "Ապրանքներ",
+    "leave_review": "Թողնել կարծիք",
+    "summary": "Ամփոփում",
+    "subtotal": "Ենթահանրագումար",
+    "shipping": "Առաքում",
+    "free_shipping": "Անվճար առաքում",
+    "total_savings": "Ընդհանուր խնայողություն",
+    "first_shop_discount": "Առաջին գնման զեղչ",
+    "extra_discount": "Հավելյալ զեղչ",
+    "product_markdown": "Ապրանքի զեղչ",
+    "total_paid": "Ընդամենը վճարված"
   }
 }

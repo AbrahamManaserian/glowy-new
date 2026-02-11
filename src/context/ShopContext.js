@@ -1,19 +1,33 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from './AuthContext';
 import { db } from '../../firebase';
 import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { Snackbar, Alert } from '@mui/material';
 
 const ShopContext = createContext();
 
 export const useShop = () => useContext(ShopContext);
 
 export const ShopProvider = ({ children }) => {
+  const tAlerts = useTranslations('ShopAlerts');
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Alert State
+  const [alert, setAlert] = useState({ open: false, message: '', severity: 'info' });
+
+  // Handle alert close
+  const handleCloseAlert = () => setAlert((prev) => ({ ...prev, open: false }));
+
+  // Helper: Show Alert
+  const showAlert = (message, severity = 'warning') => {
+    setAlert({ open: true, message, severity });
+  };
 
   // Load initial state
   useEffect(() => {
@@ -133,19 +147,42 @@ export const ShopProvider = ({ children }) => {
   }, [cart, wishlist, user, isInitialized]);
 
   const addToCart = async (product, variant, quantity = 1) => {
-    // Generate a unique item ID (could be variant ID or composite)
-    // We store minimal ref + snapshot for display
     const variantId = variant?.id || 'default';
+    const availableStock = variant?.quantity || product.stock || 0; // Use variant qty or fallback to product
     const cartItemId = `${product.id}_${variantId}`;
+
+    let newCart = [...cart];
+    const existingItemIndex = newCart.findIndex(
+      (item) => item.productId === product.id && item.variantId === variantId,
+    );
+
+    let currentQtyInCart = 0;
+    if (existingItemIndex > -1) {
+      currentQtyInCart = newCart[existingItemIndex].quantity;
+    }
+
+    // Check Limit & Auto-correct
+    let finalQuantity = quantity;
+    if (currentQtyInCart + quantity > availableStock) {
+      const allowed = Math.max(0, availableStock - currentQtyInCart);
+      if (allowed === 0) {
+        showAlert(tAlerts('cannot_add_more', { count: availableStock }), 'error');
+        return;
+      }
+      finalQuantity = allowed;
+      showAlert(tAlerts('stock_limited', { count: availableStock }), 'warning');
+    }
 
     // Construct the item object
     const newItem = {
       productId: product.id,
       variantId: variantId,
-      quantity: quantity,
+      quantity: finalQuantity,
+      // Pass max stock for later checks/UI
+      maxStock: availableStock,
       // Snapshot data for UI
       name: product.name,
-      slug: product.slug || product.id, // Fallback to ID if slug missing
+      slug: product.slug || product.id,
       price: variant?.price || product.price || 0,
       discount: variant?.discount || product.discount || 0,
       image: variant?.image || product.mainImage || '',
@@ -153,16 +190,11 @@ export const ShopProvider = ({ children }) => {
       addedAt: new Date().toISOString(),
     };
 
-    let newCart = [...cart];
-    const existingItemIndex = newCart.findIndex(
-      (item) => item.productId === product.id && item.variantId === variantId,
-    );
-
     if (existingItemIndex > -1) {
-      // Update quantity
-      newCart[existingItemIndex].quantity += quantity;
+      newCart[existingItemIndex].quantity += finalQuantity;
+      // Ensure we preserve maxStock info in case it wasn't there before
+      newCart[existingItemIndex].maxStock = availableStock;
     } else {
-      // Add new
       newCart.push(newItem);
     }
 
@@ -173,11 +205,15 @@ export const ShopProvider = ({ children }) => {
     if (user) {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, { cart: newCart }).catch(async (err) => {
-        // If doc doesn't exist, set it (fallback)
         if (err.code === 'not-found') {
           await setDoc(userRef, { cart: newCart }, { merge: true });
         }
       });
+    }
+
+    // Optional: Success feedback
+    if (finalQuantity > 0 && finalQuantity === quantity) {
+      showAlert(tAlerts('added_to_cart'), 'success');
     }
   };
 
@@ -193,9 +229,22 @@ export const ShopProvider = ({ children }) => {
   const updateCartQuantity = async (productId, variantId, newQuantity) => {
     if (newQuantity < 1) return;
 
+    // Find current item
+    const currentItem = cart.find((item) => item.productId === productId && item.variantId === variantId);
+    if (!currentItem) return;
+
+    // Check Limit & Auto-correct
+    const limit = currentItem.maxStock || 100; // default large number if unknown
+
+    let validQuantity = newQuantity;
+    if (newQuantity > limit) {
+      showAlert(tAlerts('cannot_add_more', { count: limit }), 'warning');
+      validQuantity = limit;
+    }
+
     const newCart = cart.map((item) => {
       if (item.productId === productId && item.variantId === variantId) {
-        return { ...item, quantity: newQuantity };
+        return { ...item, quantity: validQuantity };
       }
       return item;
     });
@@ -290,9 +339,21 @@ export const ShopProvider = ({ children }) => {
         getCartCount,
         updateCartItems,
         clearCart,
+        alert, // Expose alert state
+        handleCloseAlert, // Expose close handler
       }}
     >
       {children}
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={4000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseAlert} severity={alert.severity} sx={{ width: '100%', boxShadow: 3 }}>
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </ShopContext.Provider>
   );
-};
+};;

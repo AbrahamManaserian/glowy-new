@@ -255,7 +255,7 @@ export default function CartClient() {
             <Box
               sx={{
                 bgcolor: 'white',
-                p: 1,
+                p: '8px 10px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -702,37 +702,61 @@ export default function CartClient() {
                 })}
               </Typography>
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography color="text.secondary">{t('subtotal')}</Typography>
-                <Typography fontWeight="medium">{subtotal.toLocaleString()} ֏</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, gap: 2 }}>
+                <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
+                  {t('subtotal')}
+                </Typography>
+                <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
+                  {subtotal.toLocaleString()} ֏
+                </Typography>
               </Box>
 
               {totalProductMarkdown > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100' }}>
-                  <Typography>{t('product_markdown')}</Typography>
-                  <Typography fontWeight="medium">-{totalProductMarkdown.toLocaleString()} ֏</Typography>
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100', gap: 2 }}
+                >
+                  <Typography noWrap sx={{ flex: 1 }}>
+                    {t('product_markdown')}
+                  </Typography>
+                  <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
+                    -{totalProductMarkdown.toLocaleString()} ֏
+                  </Typography>
                 </Box>
               )}
 
               {firstShopDiscountAmount > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100' }}>
-                  <Typography>{t('first_shop_discount')}</Typography>
-                  <Typography fontWeight="medium">-{firstShopDiscountAmount.toLocaleString()} ֏</Typography>
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100', gap: 2 }}
+                >
+                  <Typography noWrap sx={{ flex: 1 }}>
+                    {t('first_shop_discount')}
+                  </Typography>
+                  <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
+                    -{firstShopDiscountAmount.toLocaleString()} ֏
+                  </Typography>
                 </Box>
               )}
 
               {totalExtraDiscount > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100' }}>
-                  <Typography>{t('extra_discount', { percent: TARGET_DISCOUNT_PERCENT })}</Typography>
-                  <Typography fontWeight="medium">-{totalExtraDiscount.toLocaleString()} ֏</Typography>
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100', gap: 2 }}
+                >
+                  <Typography noWrap sx={{ flex: 1 }}>
+                    {t('extra_discount', { percent: TARGET_DISCOUNT_PERCENT })}
+                  </Typography>
+                  <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
+                    -{totalExtraDiscount.toLocaleString()} ֏
+                  </Typography>
                 </Box>
               )}
 
               <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography color="text.secondary">{t('shipping')}</Typography>
-                <Typography fontWeight="medium">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, gap: 2 }}>
+                <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
+                  {t('shipping')}
+                </Typography>
+                <Typography fontWeight="medium" sx={{ whiteSpace: 'nowrap' }}>
                   {SHIPPING_COST === 0 ? t('free') : `${SHIPPING_COST.toLocaleString()} ֏`}
                 </Typography>
               </Box>
@@ -749,9 +773,15 @@ export default function CartClient() {
                     border: '1px dashed #E65100',
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100' }}>
-                    <Typography fontWeight="bold">{t('total_savings')}</Typography>
-                    <Typography fontWeight="bold">{totalSavings.toLocaleString()} ֏</Typography>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: '#E65100', gap: 2 }}
+                  >
+                    <Typography fontWeight="bold" noWrap sx={{ flex: 1 }}>
+                      {t('total_savings')}
+                    </Typography>
+                    <Typography fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
+                      {totalSavings.toLocaleString()} ֏
+                    </Typography>
                   </Box>
                   {totalProductMarkdown > 0 && (
                     <Box
@@ -761,10 +791,15 @@ export default function CartClient() {
                         fontSize: '0.85rem',
                         color: '#E65100',
                         opacity: 0.8,
+                        gap: 2,
                       }}
                     >
-                      <Typography>• {t('product_markdown')}</Typography>
-                      <Typography>{totalProductMarkdown.toLocaleString()} ֏</Typography>
+                      <Typography noWrap sx={{ flex: 1 }}>
+                        • {t('product_markdown')}
+                      </Typography>
+                      <Typography sx={{ whiteSpace: 'nowrap' }}>
+                        {totalProductMarkdown.toLocaleString()} ֏
+                      </Typography>
                     </Box>
                   )}
                   {firstShopDiscountAmount > 0 && (
@@ -775,10 +810,15 @@ export default function CartClient() {
                         fontSize: '0.85rem',
                         color: '#E65100',
                         opacity: 0.8,
+                        gap: 2,
                       }}
                     >
-                      <Typography>• {t('first_shop_discount')}</Typography>
-                      <Typography>{firstShopDiscountAmount.toLocaleString()} ֏</Typography>
+                      <Typography noWrap sx={{ flex: 1 }}>
+                        • {t('first_shop_discount')}
+                      </Typography>
+                      <Typography sx={{ whiteSpace: 'nowrap' }}>
+                        {firstShopDiscountAmount.toLocaleString()} ֏
+                      </Typography>
                     </Box>
                   )}
                   {totalExtraDiscount > 0 && (
@@ -789,10 +829,15 @@ export default function CartClient() {
                         fontSize: '0.85rem',
                         color: '#E65100',
                         opacity: 0.8,
+                        gap: 2,
                       }}
                     >
-                      <Typography>• {t('extra_discount', { percent: TARGET_DISCOUNT_PERCENT })}</Typography>
-                      <Typography>{totalExtraDiscount.toLocaleString()} ֏</Typography>
+                      <Typography noWrap sx={{ flex: 1 }}>
+                        • {t('extra_discount', { percent: TARGET_DISCOUNT_PERCENT })}
+                      </Typography>
+                      <Typography sx={{ whiteSpace: 'nowrap' }}>
+                        {totalExtraDiscount.toLocaleString()} ֏
+                      </Typography>
                     </Box>
                   )}
                   {shippingSavings > 0 && (
@@ -803,10 +848,15 @@ export default function CartClient() {
                         fontSize: '0.85rem',
                         color: '#E65100',
                         opacity: 0.8,
+                        gap: 2,
                       }}
                     >
-                      <Typography>• {t('free_shipping_badge')}</Typography>
-                      <Typography>{shippingSavings.toLocaleString()} ֏</Typography>
+                      <Typography noWrap sx={{ flex: 1 }}>
+                        • {t('free_shipping_badge')}
+                      </Typography>
+                      <Typography sx={{ whiteSpace: 'nowrap' }}>
+                        {shippingSavings.toLocaleString()} ֏
+                      </Typography>
                     </Box>
                   )}
                 </Box>
@@ -825,11 +875,11 @@ export default function CartClient() {
 
               <Divider sx={{ my: 2 }} />
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" fontWeight="bold">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, gap: 2 }}>
+                <Typography variant="h6" fontWeight="bold" noWrap sx={{ flex: 1 }}>
                   {t('order_total')}
                 </Typography>
-                <Typography variant="h6" fontWeight="bold">
+                <Typography variant="h6" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                   {total.toLocaleString()} ֏
                 </Typography>
               </Box>

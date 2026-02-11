@@ -250,5 +250,47 @@
       "email": "Email",
       "note": "Примечание"
     }
+  },
+  "Validation": {
+    "fix_errors": "Пожалуйста, исправьте ошибки в форме.",
+    "firstName_required": "Имя обязательно",
+    "lastName_required": "Фамилия обязательна",
+    "address_required": "Адрес обязателен",
+    "phone_required": "Номер телефона обязателен",
+    "phone_invalid": "Неверный формат телефона (напр. +37491234567)",
+    "email_invalid": "Неверный email адрес",
+    "email_required_guest": "Email обязателен для гостевого заказа",
+    "stock_validation_failed": "Ошибка наличия: {productName}: Запрошено {requested}, доступно {available}."
+  },
+  "ShopAlerts": {
+    "stock_limited": "Извините, в наличии только {count} шт.",
+    "added_to_cart": "Товар добавлен в корзину",
+    "cannot_add_more": "Нельзя добавить больше. В наличии только {count} шт."
+  },
+  "Orders": {
+    "title": "Мои заказы",
+    "tabs": {
+      "all": "Все",
+      "pending": "В ожидании",
+      "processing": "В обработке",
+      "shipping": "Доставляется",
+      "delivered": "Доставлено",
+      "rejected": "Отклонено"
+    },
+    "no_orders": "Заказы не найдены",
+    "go_to_shop": "Перейти в магазин",
+    "order_number": "Заказ #",
+    "placed_on": "Дата оформления",
+    "items_header": "Товары",
+    "leave_review": "Оставить отзыв",
+    "summary": "Сводка",
+    "subtotal": "Подытог",
+    "shipping": "Доставка",
+    "free_shipping": "Бесплатная доставка",
+    "total_savings": "Общая экономия",
+    "first_shop_discount": "Скидка на первый заказ",
+    "extra_discount": "Дополнительная скидка",
+    "product_markdown": "Уценка товара",
+    "total_paid": "Итого оплачено"
   }
 }

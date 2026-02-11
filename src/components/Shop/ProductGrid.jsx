@@ -114,7 +114,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
     // Use slug for cleaner URLs, fallback to ID
     const urlSlug = product.slug || product.id;
     router.push(`/product/${urlSlug}${query}`);
-  };;
+  };
 
   const hasOptions = variants.length > 1;
 
@@ -380,7 +380,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
         <IconButton
           size="small"
           onClick={() => addToCart(product, currentVariant)}
-          disabled={currentVariant.stock <= 0}
+          disabled={currentVariant.quantity <= 0}
           sx={{
             border: '1px solid',
             borderColor: 'divider',
@@ -390,7 +390,7 @@ const ProductCard = memo(({ product, t, tCats }) => {
             height: { xs: 32, md: 40 },
             flexShrink: 0,
             '&:hover': { bgcolor: 'action.hover' },
-            opacity: currentVariant.stock <= 0 ? 0.5 : 1,
+            opacity: currentVariant.quantity <= 0 ? 0.5 : 1,
           }}
         >
           <Badge

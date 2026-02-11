@@ -250,5 +250,47 @@
       "email": "Email",
       "note": "Note"
     }
+  },
+  "Validation": {
+    "fix_errors": "Please fix the errors in the form.",
+    "firstName_required": "First Name is required",
+    "lastName_required": "Last Name is required",
+    "address_required": "Address is required",
+    "phone_required": "Phone Number is required",
+    "phone_invalid": "Invalid phone format (e.g. +37491234567)",
+    "email_invalid": "Invalid email address",
+    "email_required_guest": "Email is required for guest checkout",
+    "stock_validation_failed": "Stock validation failed: {productName}: Requested {requested}, only {available} available in stock."
+  },
+  "ShopAlerts": {
+    "stock_limited": "Sorry, only {count} items available in stock.",
+    "added_to_cart": "Item added to cart",
+    "cannot_add_more": "Cannot add more. Only {count} in stock."
+  },
+  "Orders": {
+    "title": "My Orders",
+    "tabs": {
+      "all": "All",
+      "pending": "Pending",
+      "processing": "Processing",
+      "shipping": "Shipping",
+      "delivered": "Delivered",
+      "rejected": "Rejected"
+    },
+    "no_orders": "No orders found",
+    "go_to_shop": "Go to Shop",
+    "order_number": "Order #",
+    "placed_on": "Placed on",
+    "items_header": "Items",
+    "leave_review": "Leave a Review",
+    "summary": "Summary",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "free_shipping": "Free shipping",
+    "total_savings": "Total Savings",
+    "first_shop_discount": "First shop discount",
+    "extra_discount": "Extra discount",
+    "product_markdown": "Product markdown",
+    "total_paid": "Total Paid"
   }
 }

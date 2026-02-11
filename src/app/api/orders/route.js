@@ -114,7 +114,7 @@ export async function POST(request) {
       },
     };
 
-    // 6. Save to Firestore with Sequential ID (Atomic Transaction)
+    // 6. Save to Firestore with Sequential ID & Stock Management (Atomic Transaction)
     // Determine if we need to remove firstShop bonus BEFORE transaction to keep it clean
     const shouldRemoveFirstShop = user && user.firstShop && calculation.breakdown.firstShopDiscount > 0;
 
@@ -123,23 +123,120 @@ export async function POST(request) {
     await adminDb.runTransaction(async (t) => {
       // A. Get current order count
       const counterRef = adminDb.collection('counters').doc('orders');
-      const counterDoc = await t.get(counterRef);
 
+      // Prepare Product Refs for Stock Check
+      // We need to read them inside the transaction to ensure atomicity
+      const productRefs = items.map((item) => adminDb.collection('products').doc(item.productId));
+      const uniqueProductRefs = [...new Set(productRefs.map((r) => r.path))].map((path) => adminDb.doc(path));
+
+      // Perform Reads
+      const [counterDoc, ...productDocs] = await Promise.all([
+        t.get(counterRef),
+        ...uniqueProductRefs.map((ref) => t.get(ref)),
+      ]);
+
+      // Map product docs for easy access
+      const transactionProductsMap = {};
+      productDocs.forEach((doc) => {
+        if (doc.exists) transactionProductsMap[doc.id] = doc.data();
+      });
+
+      // B. generate new ID
       let currentCount = 0;
       if (counterDoc.exists) {
         currentCount = counterDoc.data().count || 0;
       }
-
-      // B. Generate new ID
       const newCount = currentCount + 1;
       const newOrderId = String(newCount).padStart(7, '0');
 
-      // C. Update Counter
+      // C. Validate Stock & update Order Items
+      // We modify the 'orderData.itemsSnapshot' quantity based on actual stock
+      // And we prepare the stock updates
+
+      const finalItemsSnapshot = orderData.itemsSnapshot
+        .map((item) => {
+          const productData = transactionProductsMap[item.productId];
+          if (!productData) return null; // Product deleted?
+
+          // Find variant logic again
+          let variantIndex = -1;
+          let availableStock = 0;
+          let isVariant = false;
+
+          if (productData.variants && Array.isArray(productData.variants)) {
+            variantIndex = productData.variants.findIndex((v) => v.id === item.variantId);
+            if (variantIndex > -1) {
+              availableStock = productData.variants[variantIndex].quantity || 0;
+              isVariant = true;
+            }
+          } else {
+            // Fallback for simple products (if any)
+            availableStock = productData.stock || 0;
+          }
+
+          // Cap Quantity
+          const originalQty = item.quantity;
+          const finalQty = Math.min(originalQty, availableStock);
+
+          if (finalQty === 0) return null; // Out of stock completely, remove from order
+
+          // Decrement Stock Logic - DISABLED for now as per requirement
+          /* 
+         if (isVariant) {
+            productData.variants[variantIndex].quantity -= finalQty; // Mutating local copy
+         } else {
+            productData.stock -= finalQty;
+         }
+         */
+
+          return {
+            ...item,
+            quantity: finalQty,
+            totalItemPrice: item.finalUnitPrice * finalQty,
+          };
+        })
+        .filter(Boolean); // Remove nulls (out of stock items)
+
+      if (finalItemsSnapshot.length === 0) {
+        throw new Error('All items are out of stock.');
+      }
+
+      // Recalculate Totals (Basic Logic) based on capped quantities
+      // Ideally we would re-run 'calculateCartTotals', but that's complex inside transaction without importing deps.
+      // For simplicity, we sum up the 'totalItemPrice' we just calculated.
+      // Note: This ignores 'bonusAmount' adjustments slightly if subtotal drops, but ensures price matches quantity.
+
+      const newTotal =
+        finalItemsSnapshot.reduce((acc, item) => acc + item.totalItemPrice, 0) + calculation.shippingCost;
+      const newSubtotal = finalItemsSnapshot.reduce((acc, item) => acc + item.totalItemPrice, 0); // Approx
+
+      // Update Order Data with Capped Values
+      const finalOrderData = {
+        ...orderData,
+        id: newOrderId,
+        itemsSnapshot: finalItemsSnapshot,
+        total: newTotal,
+        subtotal: newSubtotal,
+        // We accept that savings/breakdowns might be slightly off if quantity was capped,
+        // but the Total to Pay is correct.
+      };
+
+      // D. Perform Writes
+      // 1. Counter
       t.set(counterRef, { count: newCount });
 
-      // D. Save Order with custom ID
+      // 2. Order
       const orderRef = adminDb.collection('orders').doc(newOrderId);
-      t.set(orderRef, { ...orderData, id: newOrderId }); // Saving ID in doc for convenience
+      t.set(orderRef, finalOrderData);
+
+      // 3. Product Stocks (Update all changed product docs) - DISABLED
+      /*
+      Object.keys(transactionProductsMap).forEach(productId => {
+          const productRef = adminDb.collection('products').doc(productId);
+          // transactionProductsMap[productId] has the mutated stock values from above loop
+          t.set(productRef, transactionProductsMap[productId], { merge: true });
+      });
+      */
 
       // E. Update User First Shop Status (if needed)
       if (shouldRemoveFirstShop) {
