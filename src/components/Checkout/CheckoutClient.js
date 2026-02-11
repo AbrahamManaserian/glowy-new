@@ -122,7 +122,7 @@ export default function CheckoutClient() {
         firstName: prev.firstName || names[0] || '',
         lastName: prev.lastName || names.slice(1).join(' ') || '',
         email: prev.email || user.email || '',
-        phone: prev.phone || user.phoneNumber || prev.phone || '',
+        phone: prev.phone || user.phone || prev.phone || '',
         address: prev.address || user.address || prev.address || '',
         note: prev.note || '',
       }));
