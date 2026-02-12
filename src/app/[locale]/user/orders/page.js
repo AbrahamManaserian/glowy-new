@@ -27,8 +27,7 @@ import { db } from '../../../../../firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useRouter } from '../../../../i18n/navigation';
 
-function OrderRow({ order, t }) {
-  const [open, setOpen] = useState(false);
+function OrderRow({ order, t, isOpen, onToggle }) {
   const router = useRouter(); // Use main router or from props if available context-wide, but hooks are fine here.
   const orderItems = order.itemsSnapshot || order.items || [];
 
@@ -116,14 +115,14 @@ function OrderRow({ order, t }) {
   return (
     <Paper variant="outlined" sx={{ mb: 2, borderRadius: 2, overflow: 'hidden' }}>
       <Box
-        onClick={() => setOpen(!open)}
+        onClick={onToggle}
         sx={{
           p: { xs: 1.5, md: 2 },
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           cursor: 'pointer',
-          bgcolor: open ? '#f8f9fa' : 'white',
+          bgcolor: isOpen ? '#f8f9fa' : 'white',
           transition: 'background-color 0.2s',
         }}
       >
@@ -175,18 +174,18 @@ function OrderRow({ order, t }) {
             <IconButton
               onClick={(e) => {
                 e.stopPropagation();
-                setOpen(!open);
+                onToggle();
               }}
               size="small"
               sx={{ p: 0 }}
             >
-              {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+              {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           </Box>
         </Box>
       </Box>
 
-      <Collapse in={open} timeout="auto" unmountOnExit>
+      <Collapse in={isOpen} timeout="auto" unmountOnExit>
         <Divider />
         <Box sx={{ p: { xs: 1.5, md: 2 } }}>
           {bonusText && (
@@ -462,8 +461,44 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState('all');
+  const [expandedOrders, setExpandedOrders] = useState({});
 
-  // Load Orders
+  // 1. Initial Load from Session Storage
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const cachedData = sessionStorage.getItem(`glowy_orders_${user.uid}`);
+      if (cachedData) {
+        const {
+          orders: cachedOrders,
+          expanded: cachedExpanded,
+          tab: cachedTab,
+          timestamp,
+        } = JSON.parse(cachedData);
+        // We need to convert string timestamps back to Date objects if needed,
+        // but OrderRow handles string/timestamp conversion via `new Date(order.createdAt)`.
+        // However, FS timestamp objects have .toDate().
+        // Our fetch logic below normalizes them to JS Dates or strings.
+        // Let's assume serialization made them strings.
+
+        if (cachedOrders && Array.isArray(cachedOrders)) {
+          setOrders(cachedOrders);
+          setExpandedOrders(cachedExpanded || {});
+          if (cachedTab) setTabValue(cachedTab);
+
+          // If cache is less than 5 minutes old, skip loading spinner
+          const CACHE_DURATION = 5 * 60 * 1000;
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            setLoading(false);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error reading order cache', e);
+    }
+  }, [user]);
+
+  // 2. Fetch Orders (Background update or Initial)
   useEffect(() => {
     async function fetchOrders() {
       if (!user) return;
@@ -473,12 +508,37 @@ export default function OrdersPage() {
         const loadedOrders = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
+          // Normalize dates to strings/numbers to avoid serialization issues
           createdAt: doc.data().createdAt?.toDate
-            ? doc.data().createdAt.toDate()
-            : new Date(doc.data().createdAt || Date.now()),
+            ? doc.data().createdAt.toDate().toISOString()
+            : new Date(doc.data().createdAt || Date.now()).toISOString(),
         }));
-        loadedOrders.sort((a, b) => b.createdAt - a.createdAt);
+        loadedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
         setOrders(loadedOrders);
+
+        // Update cache ensuring we don't overwrite UI state (expanded, tab) with stale closure
+        const key = `glowy_orders_${user.uid}`;
+        let currentExpanded = {};
+        let currentTab = 'all';
+        try {
+          const cached = sessionStorage.getItem(key);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            currentExpanded = parsed.expanded || {};
+            currentTab = parsed.tab || 'all';
+          }
+        } catch (e) {}
+
+        sessionStorage.setItem(
+          key,
+          JSON.stringify({
+            orders: loadedOrders,
+            expanded: currentExpanded,
+            tab: currentTab,
+            timestamp: Date.now(),
+          }),
+        );
       } catch (err) {
         console.error('Failed to load orders', err);
       } finally {
@@ -489,7 +549,39 @@ export default function OrdersPage() {
     if (user) {
       fetchOrders();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // 3. Save UI State (Expanded & Tab) to Cache
+  useEffect(() => {
+    if (!user || orders.length === 0) return;
+
+    // We update the existing cache entry with new UI state
+    try {
+      const key = `glowy_orders_${user.uid}`;
+      const currentCache = sessionStorage.getItem(key);
+      if (currentCache) {
+        const parsed = JSON.parse(currentCache);
+        sessionStorage.setItem(
+          key,
+          JSON.stringify({
+            ...parsed,
+            expanded: expandedOrders,
+            tab: tabValue,
+          }),
+        );
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [expandedOrders, tabValue, user, orders.length]);
+
+  const handleToggle = (orderId) => {
+    setExpandedOrders((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId],
+    }));
+  };
 
   // Tabs logic
   const handleTabChange = (event, newValue) => {
@@ -588,7 +680,13 @@ export default function OrdersPage() {
       ) : (
         <Box>
           {filteredOrders.map((order) => (
-            <OrderRow key={order.id} order={order} t={t} />
+            <OrderRow
+              key={order.id}
+              order={order}
+              t={t}
+              isOpen={!!expandedOrders[order.id]}
+              onToggle={() => handleToggle(order.id)}
+            />
           ))}
         </Box>
       )}
