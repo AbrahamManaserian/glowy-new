@@ -191,7 +191,6 @@ export default function CheckoutClient() {
 
   const { subtotal, breakdown, shippingCost, total, totalSavings, bonusAmount, meta, itemCalculations } =
     useCartCalculations(cart, user, selectedKeys, shippingMethod);
-
   const { thresholds } = meta;
 
   const handlePlaceOrder = async () => {
@@ -313,8 +312,19 @@ export default function CheckoutClient() {
         <Typography variant="body1" color="text.secondary" paragraph>
           {t.rich('success_msg', {
             orderId: orderId,
-            b: (chunks) => <b>{chunks}</b>,
+            b: (chunks) => (
+              <Box
+                component="span"
+                sx={{ cursor: 'pointer', textDecoration: 'underline', color: 'primary.main' }}
+                onClick={() => router.push('/user/orders')}
+              >
+                <b>#{chunks}</b>
+              </Box>
+            ),
           })}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+          {t('success_track_info')}
         </Typography>
         <Button variant="contained" sx={{ mt: 2, bgcolor: 'black' }} onClick={() => router.push('/shop')}>
           {tCart('continue_shopping_btn')}
@@ -772,11 +782,11 @@ export default function CheckoutClient() {
                 variant="contained"
                 fullWidth
                 size="medium"
-                disabled={loading}
+                disabled={loading || subtotal <= 0 || total <= 0}
                 sx={{ bgcolor: '#2D3436', '&:hover': { bgcolor: 'black' }, mb: 2 }}
                 onClick={handlePlaceOrder}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : t('place_order')}
+                {loading ? <CircularProgress size={24} color="success" /> : t('place_order')}
               </Button>
               <Button
                 variant="contained"

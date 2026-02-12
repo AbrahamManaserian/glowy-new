@@ -227,6 +227,9 @@
   "Checkout": {
     "title": "Վճարում",
     "no_items_selected": "Զամբյուղում ապրանքներ ընտրված չեն:",
+    "success_title": "Պատվերը հաստատված է!",
+    "success_msg": "Շնորհակալություն գնումների համար: Ձեր պատվերի համարն է՝ <b>{orderId}</b>:",
+    "success_track_info": "Դուք կարող եք հետևել Ձեր պատվերի կարգավիճակին «Իմ պատվերները» բաժնում:",
     "back_to_cart": "Վերադառնալ զամբյուղ",
     "shipping_address": "Առաքման հասցե",
     "shipping_method": "Առաքման եղանակ",
@@ -286,11 +289,16 @@
     "summary": "Ամփոփում",
     "subtotal": "Ենթահանրագումար",
     "shipping": "Առաքում",
-    "free_shipping": "Անվճար առաքում",
+    "free_shipping": "Անվճար",
     "total_savings": "Ընդհանուր խնայողություն",
     "first_shop_discount": "Առաջին գնման զեղչ",
     "extra_discount": "Հավելյալ զեղչ",
     "product_markdown": "Ապրանքի զեղչ",
-    "total_paid": "Ընդամենը վճարված"
+    "total_paid": "Ընդամենը վճարված",
+    "est_arrival": "Նախատեսվող ժամանում",
+    "bonus_earned": "Դուք վաստակել եք {amount} ֏ բոնուսային միավոր!",
+    "bonus_pending": "Դուք կստանաք {amount} ֏ բոնուսային միավոր պատվերը ստանալուց հետո!",
+    "shipping_standard": "Ստանդարտ առաքում",
+    "shipping_express": "Էքսպրես առաքում"
   }
 }

@@ -227,6 +227,9 @@
   "Checkout": {
     "title": "Оформление заказа",
     "no_items_selected": "Нет выбранных товаров для оформления.",
+    "success_title": "Заказ успешно оформлен!",
+    "success_msg": "Спасибо за покупку. Номер вашего заказа: <b>{orderId}</b>.",
+    "success_track_info": "Вы можете отслеживать статус вашего заказа в меню «Мои заказы».",
     "back_to_cart": "Назад в корзину",
     "shipping_address": "Адрес доставки",
     "shipping_method": "Способ доставки",
@@ -286,11 +289,16 @@
     "summary": "Сводка",
     "subtotal": "Подытог",
     "shipping": "Доставка",
-    "free_shipping": "Бесплатная доставка",
+    "free_shipping": "Бесплатно",
     "total_savings": "Общая экономия",
     "first_shop_discount": "Скидка на первый заказ",
     "extra_discount": "Дополнительная скидка",
     "product_markdown": "Уценка товара",
-    "total_paid": "Итого оплачено"
+    "total_paid": "Итого оплачено",
+    "est_arrival": "Ожидаемое прибытие",
+    "bonus_earned": "Вы заработали {amount} ֏ бонусных баллов!",
+    "bonus_pending": "Вы получите {amount} ֏ бонусных баллов после доставки!",
+    "shipping_standard": "Стандартная доставка",
+    "shipping_express": "Экспресс доставка"
   }
 }

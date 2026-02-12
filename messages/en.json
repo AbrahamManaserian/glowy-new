@@ -227,6 +227,9 @@
   "Checkout": {
     "title": "Checkout",
     "no_items_selected": "No items selected for checkout.",
+    "success_title": "Order Placed Successfully!",
+    "success_msg": "Thank you for your purchase. Your order number is <b>{orderId}</b>.",
+    "success_track_info": "You can track your order status in My Orders menu.",
     "back_to_cart": "Back to Cart",
     "shipping_address": "Shipping Address",
     "shipping_method": "Shipping Method",
@@ -286,11 +289,16 @@
     "summary": "Summary",
     "subtotal": "Subtotal",
     "shipping": "Shipping",
-    "free_shipping": "Free shipping",
+    "free_shipping": "Free",
     "total_savings": "Total Savings",
     "first_shop_discount": "First shop discount",
     "extra_discount": "Extra discount",
     "product_markdown": "Product markdown",
-    "total_paid": "Total Paid"
+    "total_paid": "Total Paid",
+    "est_arrival": "Est. Arrival",
+    "bonus_earned": "You earned {amount} ֏ bonus points!",
+    "bonus_pending": "You will earn {amount} ֏ bonus points after delivery!",
+    "shipping_standard": "Standard Shipping",
+    "shipping_express": "Express Shipping"
   }
 }
